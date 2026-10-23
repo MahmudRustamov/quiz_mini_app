@@ -1,0 +1,23 @@
+{
+  "questions": [
+    {
+      "position": 1,
+      "kind": "single",
+      "text": "NAMUNA: bu tuzilma misoli, haqiqiy imtihon savoli emas.",
+      "topic": "Namuna",
+      "options": [{"label":"A","text":"Birinchi variant"},{"label":"B","text":"Ikkinchi variant"}],
+      "parts": [{"label":"main","weight":1,"accepted":["A"],"case_sensitive":false,"manual_review":false}]
+    },
+    {
+      "position": 2,
+      "kind": "two_part",
+      "text": "NAMUNA: A va B mustaqil baholanadigan qismlar.",
+      "topic": "Namuna",
+      "options": [],
+      "parts": [
+        {"label":"A","prompt":"Birinchi qism","weight":1,"accepted":["namuna"],"manual_review":true},
+        {"label":"B","prompt":"Ikkinchi qism","weight":1,"accepted":["misol"],"manual_review":true}
+      ]
+    }
+  ]
+}

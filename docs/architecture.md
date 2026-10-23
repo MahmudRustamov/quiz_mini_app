@@ -1,0 +1,21 @@
+# Architecture and implementation decisions
+
+The workspace was empty on inspection. No existing bot, migrations, PDF, answer-key image, or official assessment rubric was available.
+
+FastAPI owns authentication, authorization, deadlines, attempts, scoring, publication, and immutable audit records. React uses the API exclusively; initial empty states reflect database contents. PostgreSQL is the development and production database. SQLite is only an isolated automated-test adapter.
+
+Users have one server-controlled role. Telegram HMAC-SHA256 initData validation uses a five-minute freshness window; browser sessions are opaque, hashed in the database and expire after 30 minutes. Local development identities are fixed and available only when explicitly enabled outside production. The API never accepts a role in Telegram login. Admin configuration bootstraps real administrators.
+
+Exam definitions become immutable when the first attempt begins. Draft imports require explicit verification before publication. Options, passages, scoring parts, and answer keys are stored separately. Student serialization is an explicit allowlist and never includes answer keys. Submitted attempts may see keys only after the exam's answer-release flag is authorized by an administrator.
+
+Each student has one attempt per exam. User-row locks serialize starts; attempt-row locks serialize saving, expiry, submission, and teacher corrections. Saves use optimistic revisions. The server checks deadlines on every write and finalizes expired attempts on subsequent reads/writes; no continuously running timer worker is required. Submission is idempotent by attempt identity and a unique grade per part. A frontend timer estimates time from the server clock and periodically resynchronizes.
+
+Raw grading uses explicit accepted answers, NFC normalization, whitespace normalization, and apostrophe glyph normalization while preserving Uzbek letters and diacritics. Uncertain written responses await teacher review. Essay conversions require a teacher-verified, versioned full lookup table attached to a source PDF hash; there is no fabricated official conversion. Each expert's converted score is averaged, with rubric consistency enforced. Corrections preserve audit history.
+
+Rasch calibration uses normal-population marginal maximum likelihood with Gauss–Hermite integration. Mean item difficulty is zero; latent standard deviation is one logit; latent mean is estimated. Person ability uses EAP so extreme patterns remain finite with explicit prior assumptions. Missing values are excluded. Item information approximations and infit diagnostics flag instability. Calibrations require administrator approval, validation evidence, and an explicit named reference mean/SD. Sample count alone never confers validity. The module also supports PCM calibration of ordered categories; the examination API deliberately uses independent binary subparts. Official comparability is never asserted.
+
+A validated run can be applied to subsequent submitted attempts on the same immutable exam via the scoring endpoint. Results retain calibration and scoring versions. Certificate-style outcomes require published results, valid calibration, all required expert grades and no pending raw grades. All such outcomes are labeled unofficial. CSV/Excel exports contain real persisted results.
+
+PDF ingestion uses PyMuPDF text blocks, detects two-column layouts, stores rendered page images including diagrams, extracts embedded images, and can invoke installed local Tesseract OCR. Extracted text stays in an import document for teacher verification; automatic question segmentation never invents questions or keys. JSON and CSV supply structured drafts. Uploads are bounded, generated filenames are used, and document access is authorized.
+
+Telegram polling is an explicit local CLI; webhook processing is a separate mode. Notifications and announcements are manual teacher/admin actions, avoiding a required background worker. Deployment is optional; local work is not published through Sites.

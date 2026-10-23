@@ -1,0 +1,1354 @@
+[
+  {
+    "name": "roles",
+    "columns": [
+      {
+        "name": "name",
+        "type": "string",
+        "length": 20,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": []
+  },
+  {
+    "name": "users",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "telegram_id",
+        "type": "bigint",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "length": 200,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "avatar_url",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "role",
+        "type": "string",
+        "length": 20,
+        "foreign_key": "roles.name",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "active",
+        "type": "boolean",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_users_telegram_id",
+        "columns": [
+          "telegram_id"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  {
+    "name": "audit_logs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "actor_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "users.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "action",
+        "type": "string",
+        "length": 100,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "entity_id",
+        "type": "string",
+        "length": 100,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "before",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "after",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_audit_logs_entity_id",
+        "columns": [
+          "entity_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_audit_logs_actor_id",
+        "columns": [
+          "actor_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "auth_sessions",
+    "columns": [
+      {
+        "name": "token_hash",
+        "type": "string",
+        "length": 64,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "user_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "users.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "expires_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_auth_sessions_user_id",
+        "columns": [
+          "user_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_auth_sessions_expires_at",
+        "columns": [
+          "expires_at"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "essay_rubrics",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "source_name",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "source_sha256",
+        "type": "string",
+        "length": 64,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "table",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "verified_by",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "users.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": []
+  },
+  {
+    "name": "exams",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "length": 250,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "subject",
+        "type": "string",
+        "length": 100,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "duration_minutes",
+        "type": "integer",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "length": 20,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "essay_required",
+        "type": "boolean",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "expert_count",
+        "type": "integer",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "answer_released",
+        "type": "boolean",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "results_published",
+        "type": "boolean",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "users.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [
+      "duration_minutes > 0 AND duration_minutes <= 1440"
+    ],
+    "indexes": [
+      {
+        "name": "ix_exams_status",
+        "columns": [
+          "status"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "attempts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "user_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "users.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "exam_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "exams.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "started_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "deadline",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "submitted_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "length": 20,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "essay_text",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "user_id",
+        "exam_id"
+      ]
+    ],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_attempts_user_id",
+        "columns": [
+          "user_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_attempt_status_exam",
+        "columns": [
+          "exam_id",
+          "status"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "calibration_runs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "exam_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "exams.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "model",
+        "type": "string",
+        "length": 30,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "diagnostics",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "approved",
+        "type": "boolean",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "reference_name",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "reference_mean",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "reference_sd",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "validation_note",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "created_by",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "users.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_calibration_runs_exam_id",
+        "columns": [
+          "exam_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "import_documents",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "exam_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "exams.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "source_name",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "source_sha256",
+        "type": "string",
+        "length": 64,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "extracted",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "users.id",
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_import_documents_exam_id",
+        "columns": [
+          "exam_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "passages",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "exam_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "exams.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "length": 250,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_passages_exam_id",
+        "columns": [
+          "exam_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "ability_estimates",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "calibration_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "calibration_runs.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "attempt_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "attempts.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "theta",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "standard_error",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "calibration_id",
+        "attempt_id"
+      ]
+    ],
+    "checks": [],
+    "indexes": []
+  },
+  {
+    "name": "essay_assessments",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "attempt_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "attempts.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "teacher_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "users.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "score",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "converted_score",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "rubric_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "essay_rubrics.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "comment",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "graded_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "attempt_id",
+        "teacher_id"
+      ]
+    ],
+    "checks": [
+      "score >= 0 AND score <= 24 AND score * 2 = CAST(score * 2 AS INTEGER)"
+    ],
+    "indexes": [
+      {
+        "name": "ix_essay_assessments_attempt_id",
+        "columns": [
+          "attempt_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "questions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "exam_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "exams.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "position",
+        "type": "integer",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "kind",
+        "type": "string",
+        "length": 30,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "topic",
+        "type": "string",
+        "length": 100,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "passage_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "passages.id",
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "image_paths",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "config",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "exam_id",
+        "position"
+      ]
+    ],
+    "checks": [
+      "position > 0"
+    ],
+    "indexes": [
+      {
+        "name": "ix_questions_exam_id",
+        "columns": [
+          "exam_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "standardized_results",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "attempt_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "attempts.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "calibration_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "calibration_runs.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "z",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "t",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "string",
+        "length": 30,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "attempt_id",
+        "calibration_id"
+      ]
+    ],
+    "checks": [],
+    "indexes": []
+  },
+  {
+    "name": "options",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "question_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "questions.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "label",
+        "type": "string",
+        "length": 30,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "question_id",
+        "label"
+      ]
+    ],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_options_question_id",
+        "columns": [
+          "question_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "question_parts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "question_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "questions.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "label",
+        "type": "string",
+        "length": 30,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "prompt",
+        "type": "text",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "weight",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "question_id",
+        "label"
+      ]
+    ],
+    "checks": [
+      "weight > 0"
+    ],
+    "indexes": [
+      {
+        "name": "ix_question_parts_question_id",
+        "columns": [
+          "question_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "responses",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "attempt_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "attempts.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "question_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "questions.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "answers",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "marked",
+        "type": "boolean",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "integer",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "saved_at",
+        "type": "datetime",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "attempt_id",
+        "question_id"
+      ]
+    ],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_responses_attempt_id",
+        "columns": [
+          "attempt_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "answer_keys",
+    "columns": [
+      {
+        "name": "part_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "question_parts.id",
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "accepted",
+        "type": "json",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "case_sensitive",
+        "type": "boolean",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "manual_review",
+        "type": "boolean",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "checks": [],
+    "indexes": []
+  },
+  {
+    "name": "item_parameters",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "calibration_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "calibration_runs.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "part_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "question_parts.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "difficulty",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "standard_error",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "calibration_id",
+        "part_id"
+      ]
+    ],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_item_parameters_calibration_id",
+        "columns": [
+          "calibration_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  {
+    "name": "raw_grades",
+    "columns": [
+      {
+        "name": "id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": null,
+        "primary_key": true,
+        "nullable": false
+      },
+      {
+        "name": "attempt_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "attempts.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "part_id",
+        "type": "string",
+        "length": 36,
+        "foreign_key": "question_parts.id",
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "score",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": true
+      },
+      {
+        "name": "maximum",
+        "type": "float",
+        "length": null,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "length": 20,
+        "foreign_key": null,
+        "primary_key": false,
+        "nullable": false
+      }
+    ],
+    "unique": [
+      [
+        "attempt_id",
+        "part_id"
+      ]
+    ],
+    "checks": [],
+    "indexes": [
+      {
+        "name": "ix_raw_grades_attempt_id",
+        "columns": [
+          "attempt_id"
+        ],
+        "unique": false
+      }
+    ]
+  }
+]

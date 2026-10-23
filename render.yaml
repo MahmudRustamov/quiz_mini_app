@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: milliy-sertifikat-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.12
+      - key: ENVIRONMENT
+        value: production
+      - key: DEV_AUTH
+        value: false
+      - key: BOT_MODE
+        value: webhook
+      - key: DATABASE_URL
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_TELEGRAM_IDS
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: MINI_APP_URL
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false

@@ -1,0 +1,17 @@
+.env
+.env.production
+.venv/
+__pycache__/
+.pytest_cache/
+node_modules/
+dist/
+*.pyc
+*.db
+.runtime/
+data/uploads/
+data/pg/
+.coverage
+.DS_Store
+frontend/test-results/
+frontend/playwright-report/
+data/qa-*.png
