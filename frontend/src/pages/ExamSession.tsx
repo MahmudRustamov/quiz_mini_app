@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   CheckCheck,
   Clock3,
   Flag,
@@ -15,7 +14,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, post, put } from "../services/api";
 import type { Attempt, SavedResponse } from "../types";
-import { ErrorBox, Loading, Pill, ProtectedImage } from "../components/ui";
+import { ErrorBox, Loading, Pill } from "../components/ui";
+import QuestionBody from "../components/QuestionBody";
 export default function ExamSession() {
   const { id } = useParams();
   const nav = useNavigate(),
@@ -313,94 +313,7 @@ export default function ExamSession() {
                   {marked ? "Belgilangan" : "Qayta ko‘rish"}
                 </button>
               </div>
-              <div className="question-topic">{q.topic}</div>
-              {passage && (
-                <details className="passage" open>
-                  <summary>{passage.title || "O‘qish uchun matn"}</summary>
-                  <p>{passage.text}</p>
-                </details>
-              )}
-              <h2 className="question-text">{q.text}</h2>
-              {q.image_paths.map((path) => (
-                <ProtectedImage
-                  path={path}
-                  alt={`${q.position}-savol rasmi`}
-                  key={path}
-                />
-              ))}
-              {q.parts.map((part) => (
-                <div className="question-part" key={part.id}>
-                  {part.label !== "main" && (
-                    <label className="part-label">
-                      {part.label} qism {part.prompt && `— ${part.prompt}`}
-                    </label>
-                  )}
-                  {q.kind !== "matching" && q.options.length > 0 ? (
-                    <div
-                      className="answer-options"
-                      role="radiogroup"
-                      aria-label={`${q.position}-savol ${part.label}`}
-                    >
-                      {q.options.map((option) => (
-                        <label
-                          className={`answer-option ${answer[part.label] === option.label ? "chosen" : ""}`}
-                          key={option.label}
-                        >
-                          <input
-                            type="radio"
-                            name={`${q.id}-${part.label}`}
-                            checked={answer[part.label] === option.label}
-                            onChange={() =>
-                              change(q.id, {
-                                ...answer,
-                                [part.label]: option.label,
-                              })
-                            }
-                          />
-                          <span className="option-letter">{option.label}</span>
-                          <span>{option.text}</span>
-                          {answer[part.label] === option.label && (
-                            <Check className="option-check" size={18} />
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                  ) : q.kind === "matching" && q.options.length ? (
-                    <select
-                      aria-label={`${part.label} uchun javob`}
-                      value={answer[part.label] || ""}
-                      onChange={(e) =>
-                        change(q.id, {
-                          ...answer,
-                          [part.label]: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">Mos javobni tanlang</option>
-                      {q.options.map((o) => (
-                        <option key={o.label} value={o.label}>
-                          {o.label}. {o.text}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <textarea
-                      aria-label={`${q.position}-savol ${part.label} javobi`}
-                      placeholder="Javobingizni yozing…"
-                      rows={3}
-                      maxLength={10000}
-                      value={answer[part.label] || ""}
-                      onChange={(e) =>
-                        change(q.id, {
-                          ...answer,
-                          [part.label]: e.target.value,
-                        })
-                      }
-                    />
-                  )}
-                  <small className="muted">{part.weight} ball</small>
-                </div>
-              ))}
+              <QuestionBody question={q} answers={answer} passage={passage} onAnswer={answers => change(q.id, answers)} />
               <div className="question-bottom">
                 <button
                   className="button secondary"

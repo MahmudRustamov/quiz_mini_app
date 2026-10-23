@@ -6,7 +6,7 @@ from datetime import timedelta
 from urllib.parse import urlencode
 import pytest
 from pydantic import ValidationError
-from app.core.auth import validate_init_data
+from app.core.auth import aware, validate_init_data
 from app.core.config import Settings, get_settings
 from app.models import AuthSession, now
 from sqlalchemy import select
@@ -119,3 +119,18 @@ async def test_telegram_login_then_me_with_dev_auth_disabled(client, monkeypatch
     assert token not in logs and settings.bot_token not in logs
     assert 'PRIVATE_INITDATA_SENTINEL' not in logs
     assert signed_data(token=settings.bot_token) not in logs
+
+
+async def test_expired_sessions_are_purged_and_responses_refuse_framing(client,db_session):
+    headers=await login(client)
+    async with db_session.begin() as db:
+        (await db.scalar(select(AuthSession))).expires_at=now()-timedelta(seconds=1)
+    await login(client)
+    async with db_session() as db:
+        remaining=(await db.scalars(select(AuthSession))).all()
+    assert len(remaining)==1 and aware(remaining[0].expires_at)>now()
+    response=await client.get('/api/me',headers=headers)
+    assert response.status_code==401
+    assert response.headers['x-frame-options']=='DENY'
+    assert response.headers['content-security-policy']=="frame-ancestors 'none'"
+    assert 'strict-transport-security' not in response.headers

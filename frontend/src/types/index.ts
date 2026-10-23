@@ -23,7 +23,7 @@ export interface Question {
   topic: string;
   passage_id: string | null;
   image_paths: string[];
-  options: { label: string; text: string }[];
+  options: { label: string; text: string; image_path?: string | null }[];
   parts: Part[];
 }
 export interface Exam {

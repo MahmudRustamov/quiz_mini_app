@@ -12,16 +12,15 @@ import {
   Download,
   FileUp,
   Plus,
-  Save,
   Settings2,
   ShieldCheck,
+  Trash2,
   Users,
 } from "lucide-react";
 import { api, post, put, download } from "../services/api";
 import { useAuth } from "../hooks/auth";
 import type {
   Exam,
-  Question,
   TeacherAttempt,
   Rubric,
   Calibration,
@@ -37,10 +36,12 @@ import {
   PageTitle,
   Pill,
   SectionTitle,
-  ProtectedImage,
   fmt,
   date,
 } from "../components/ui";
+import DeleteConfirmation from "./teacher/DeleteConfirmation";
+import QuestionWorkspace from "./teacher/QuestionWorkspace";
+
 const examSchema = z.object({
   title: z.string().min(3, "Kamida 3 ta belgi kiriting"),
   subject: z.string().min(1),
@@ -78,6 +79,13 @@ function TeacherNav() {
 }
 export default function Teacher() {
   const [create, setCreate] = useState(false);
+  const [pendingDelete,setPendingDelete]=useState<Exam|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+  const client=useQueryClient();
+  const act=async(action:()=>Promise<unknown>,success:string)=>{
+    setBusy(true);setError('');setMessage('');
+    try{await action();setMessage(success);await client.invalidateQueries({queryKey:['teacher-exams']});await client.invalidateQueries({queryKey:['exams']});}
+    catch(e){setError(e instanceof Error?e.message:'Amal bajarilmadi');}finally{setBusy(false);}
+  };
   const nav = useNavigate();
   const q = useQuery({
     queryKey: ["teacher-exams"],
@@ -127,6 +135,13 @@ export default function Teacher() {
         }
       />
       <TeacherNav />
+      {error&&<ErrorBox error={error}/>}
+      {message&&<div className="success-note" role="status"><CheckCheck size={18}/>{message}</div>}
+      {pendingDelete&&<DeleteConfirmation text={`«${pendingDelete.title}» qoralamasi, savollari, matnlari va yuklangan fayllari o‘chiriladi. Audit tarixi saqlanadi.`} busy={busy} error={error}
+        onCancel={()=>setPendingDelete(null)} onConfirm={()=>void act(async()=>{
+          await api(`/teacher/exams/${pendingDelete.id}`,{method:'DELETE'});
+          client.removeQueries({queryKey:['teacher-exam',pendingDelete.id]});setPendingDelete(null);
+        },'Qoralama imtihon o‘chirildi')}/>}
       {create && (
         <form
           className="panel form-panel"
@@ -220,6 +235,8 @@ export default function Teacher() {
                       Boshqarish
                       <ArrowRight size={16} />
                     </Link>
+                    {e.status==='draft'&&<button className="text-link" style={{marginLeft:12}} disabled={busy} aria-label={`${e.title} imtihonini o‘chirish`}
+                      onClick={()=>{setError('');setPendingDelete(e);}}><Trash2 size={15}/>O‘chirish</button>}
                   </td>
                 </tr>
               ))}
@@ -289,65 +306,19 @@ function AttemptTable({ rows }: { rows: TeacherAttempt[] }) {
     </div>
   );
 }
-const blankQuestion = {
-  position: 1,
-  kind: "single",
-  text: "",
-  topic: "Umumiy",
-  passage_id: null,
-  image_paths: [],
-  options: [
-    { label: "A", text: "" },
-    { label: "B", text: "" },
-    { label: "C", text: "" },
-    { label: "D", text: "" },
-  ],
-  parts: [
-    {
-      label: "main",
-      prompt: "",
-      weight: 1,
-      accepted: [],
-      case_sensitive: false,
-      manual_review: false,
-    },
-  ],
-};
-function toEditor(q: Question) {
-  return {
-    position: q.position,
-    kind: q.kind,
-    text: q.text,
-    topic: q.topic,
-    passage_id: q.passage_id,
-    image_paths: q.image_paths,
-    options: q.options,
-    parts: q.parts.map(
-      ({ label, prompt, weight, accepted, case_sensitive, manual_review }) => ({
-        label,
-        prompt,
-        weight,
-        accepted: accepted || [],
-        case_sensitive: !!case_sensitive,
-        manual_review: !!manual_review,
-      }),
-    ),
-  };
-}
 export function ExamEditor() {
   const { id } = useParams();
   const { user } = useAuth();
   const client = useQueryClient();
+  const nav = useNavigate();
   const [tab, setTab] = useState("questions"),
-    [editor, setEditor] = useState(JSON.stringify(blankQuestion, null, 2)),
-    [editId, setEditId] = useState<string | null>(null),
     [message, setMessage] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [verified, setVerified] = useState(false),
     [ocr, setOcr] = useState(false),
-    [passageTitle, setPassageTitle] = useState(""),
-    [passageText, setPassageText] = useState("");
+    [reviewBusy, setReviewBusy] = useState(false),
+    [confirmDelete, setConfirmDelete] = useState(false);
   const q = useQuery({
     queryKey: ["teacher-exam", id],
     queryFn: () => api<Exam>(`/teacher/exams/${id}`),
@@ -403,24 +374,8 @@ export function ExamEditor() {
   if (q.error) return <ErrorBox error={q.error} />;
   const exam = q.data!,
     editable = exam.status === "draft";
-  const saveQuestion = async (event: FormEvent) => {
-    event.preventDefault();
-    await act(async () => {
-      const data = JSON.parse(editor);
-      if (editId) await put(`/teacher/exams/${id}/questions/${editId}`, data);
-      else await post(`/teacher/exams/${id}/questions`, data);
-      setEditId(null);
-      setEditor(
-        JSON.stringify(
-          { ...blankQuestion, position: exam.question_count + 2 },
-          null,
-          2,
-        ),
-      );
-    }, "Savol saqlandi");
-  };
   const upload = async (file: File | undefined, kind: string) => {
-    if (!file) return;
+    if (!file || busy || reviewBusy) return;
     await act(async () => {
       const data = new FormData();
       data.append("file", file);
@@ -442,15 +397,59 @@ export function ExamEditor() {
         title={exam.title}
         description={`${exam.subject} · ${exam.duration_minutes} daqiqa · ${exam.question_count} ta savol`}
         action={
-          <Pill tone={editable ? "amber" : "green"}>
-            {editable
-              ? "Qoralama"
-              : exam.status === "closed"
-                ? "Yopilgan"
-                : "E’lon qilingan"}
-          </Pill>
+          <>
+            <Pill tone={editable ? "amber" : "green"}>
+              {editable
+                ? "Qoralama"
+                : exam.status === "closed"
+                  ? "Yopilgan"
+                  : "E’lon qilingan"}
+            </Pill>
+            {/* A draft is deletable from here too, not only from the exam list. */}
+            {editable && (
+              <button
+                className="text-link"
+                disabled={busy || reviewBusy}
+                aria-label={`${exam.title} imtihonini o‘chirish`}
+                onClick={() => {
+                  setError("");
+                  setConfirmDelete(true);
+                }}
+              >
+                <Trash2 size={15} />
+                O‘chirish
+              </button>
+            )}
+          </>
         }
       />
+      {confirmDelete && (
+        <DeleteConfirmation
+          text={`«${exam.title}» qoralamasi, savollari, matnlari va yuklangan fayllari o‘chiriladi. Audit tarixi saqlanadi.`}
+          busy={busy}
+          error={error}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            void (async () => {
+              setBusy(true);
+              setError("");
+              try {
+                await api(`/teacher/exams/${exam.id}`, { method: "DELETE" });
+                client.removeQueries({ queryKey: ["teacher-exam", exam.id] });
+                setConfirmDelete(false);
+                await refresh();
+                nav("/teacher");
+              } catch (e) {
+                setError(
+                  e instanceof Error ? e.message : "Imtihon o‘chirilmadi.",
+                );
+              } finally {
+                setBusy(false);
+              }
+            })()
+          }
+        />
+      )}
       <div className="tabs teacher-tabs">
         {[
           ["questions", "Savollar"],
@@ -481,123 +480,7 @@ export function ExamEditor() {
       )}
       {tab === "questions" && (
         <>
-          <div className="editor-columns">
-            <div className="panel question-list-panel">
-              <SectionTitle title="Savollar">
-                <button
-                  className="text-link"
-                  disabled={!editable}
-                  onClick={() => {
-                    setEditId(null);
-                    setEditor(
-                      JSON.stringify(
-                        { ...blankQuestion, position: exam.question_count + 1 },
-                        null,
-                        2,
-                      ),
-                    );
-                  }}
-                >
-                  Yangi
-                  <Plus size={16} />
-                </button>
-              </SectionTitle>
-              {exam.questions?.length ? (
-                exam.questions.map((question) => (
-                  <button
-                    className={`editor-question ${editId === question.id ? "active" : ""}`}
-                    key={question.id}
-                    onClick={() => {
-                      setEditId(question.id);
-                      setEditor(JSON.stringify(toEditor(question), null, 2));
-                    }}
-                  >
-                    <span>{question.position}</span>
-                    <div>
-                      <strong>{question.text.slice(0, 70)}</strong>
-                      <small>
-                        {question.kind} · {question.topic}
-                      </small>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <Empty
-                  title="Savol yo‘q"
-                  description="Savol qo‘shing yoki import qiling."
-                />
-              )}
-            </div>
-            <form className="panel form-panel" onSubmit={saveQuestion}>
-              <h2>{editId ? "Savolni tahrirlash" : "Yangi savol"}</h2>
-              <p className="muted small">
-                Savol va kalitning JSON muharriri. <code>accepted</code> — aniq
-                qabul qilinadigan javoblar. A/B qismlari uchun ikkita alohida{" "}
-                <code>parts</code> yozing. Moslashtirish uchun har bir juftlik
-                alohida qism bo‘ladi.
-              </p>
-              <label className="field">
-                Savol tuzilishi
-                <textarea
-                  className="code-editor"
-                  rows={24}
-                  spellCheck={false}
-                  value={editor}
-                  onChange={(e) => setEditor(e.target.value)}
-                  readOnly={!editable}
-                />
-              </label>
-              <button className="button primary" disabled={busy || !editable}>
-                <Save size={17} />
-                Savolni saqlash
-              </button>
-            </form>
-          </div>
-          <details className="panel form-panel">
-            <summary>Umumiy o‘qish matni qo‘shish</summary>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void act(async () => {
-                  await post(`/teacher/exams/${id}/passages`, {
-                    title: passageTitle,
-                    text: passageText,
-                  });
-                  setPassageTitle("");
-                  setPassageText("");
-                }, "Matn saqlandi");
-              }}
-            >
-              <label className="field">
-                Matn nomi
-                <input
-                  value={passageTitle}
-                  onChange={(e) => setPassageTitle(e.target.value)}
-                />
-              </label>
-              <label className="field">
-                Matn
-                <textarea
-                  rows={6}
-                  required
-                  value={passageText}
-                  onChange={(e) => setPassageText(e.target.value)}
-                />
-              </label>
-              <button className="button primary" disabled={busy || !editable}>
-                Matnni saqlash
-              </button>
-            </form>
-            {exam.passages?.map((p) => (
-              <div className="info-note" key={p.id}>
-                <p>
-                  <strong>{p.title}</strong>
-                  <br />
-                  Savollarda <code>passage_id: "{p.id}"</code> dan foydalaning.
-                </p>
-              </div>
-            ))}
-          </details>
+          <QuestionWorkspace key={exam.id} exam={exam} onRefresh={refresh} />
         </>
       )}
       {tab === "import" && (
@@ -617,7 +500,7 @@ export function ExamEditor() {
                 <input
                   type="file"
                   accept="application/pdf"
-                  disabled={busy || !editable}
+                  disabled={busy || reviewBusy || !editable}
                   onChange={(e) => void upload(e.target.files?.[0], "pdf")}
                 />
               </label>
@@ -628,7 +511,7 @@ export function ExamEditor() {
                 <input
                   type="file"
                   accept=".json,.csv"
-                  disabled={busy || !editable}
+                  disabled={busy || reviewBusy || !editable}
                   onChange={(e) =>
                     void upload(e.target.files?.[0], "structured")
                   }
@@ -646,48 +529,10 @@ export function ExamEditor() {
             {busy && <Loading />}
           </div>
           {docs.error && <ErrorBox error={docs.error} />}{" "}
-          {docs.data?.map((doc) => (
-            <div className="panel form-panel" key={doc.id}>
-              <h2>{doc.source_name}</h2>
-              <Pill tone="amber">O‘qituvchi tekshiruvi talab qilinadi</Pill>
-              {doc.extracted.pages.map((page) => (
-                <details className="import-page" key={page.page}>
-                  <summary>
-                    {page.page}-sahifa ·{" "}
-                    {page.two_columns ? "Ikki ustun" : "Bir ustun"}{" "}
-                    {page.scanned ? "· Skan" : ""}
-                  </summary>
-                  <div className="import-preview">
-                    <ProtectedImage
-                      path={page.page_image}
-                      alt={`${page.page}-sahifa`}
-                    />
-                    <div>
-                      <textarea
-                        aria-label="Ajratilgan matn"
-                        readOnly
-                        rows={16}
-                        value={page.text}
-                      />
-                      <p className="muted small">
-                        Sahifa rasmi: <code>{page.page_image}</code>
-                      </p>
-                      {page.images.map((image) => (
-                        <p className="small" key={image}>
-                          Rasm: <code>{image}</code>
-                        </p>
-                      ))}
-                      {page.warnings.map((w) => (
-                        <p className="alert" key={w}>
-                          {w}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </details>
-              ))}
-            </div>
-          ))}
+          {docs.isPending && <Loading />}
+          {docs.data && <p className="info-note">Import qilingan savollar va javob kalitlarini o‘qituvchi tekshirishi shart. E’lon qilish Sozlamalar bo‘limida alohida tasdiqlanadi.</p>}
+          {docs.data && <QuestionWorkspace key={exam.id} exam={exam} onRefresh={refresh} importDocs={docs.data} disabled={busy} onBusyChange={setReviewBusy} />}
+
         </>
       )}
       {tab === "results" && (

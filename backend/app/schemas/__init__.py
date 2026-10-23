@@ -42,7 +42,14 @@ class PartInput(BaseModel):
 
 class OptionInput(BaseModel):
     label: str = Field(min_length=1, max_length=30)
-    text: str = Field(min_length=1, max_length=10000)
+    text: str = Field(default='', max_length=10000)
+    image_path: str | None = None
+
+    @model_validator(mode='after')
+    def content_required(self):
+        if not self.text.strip() and not self.image_path:
+            raise ValueError('Variant matni yoki rasmi bo‘lishi kerak')
+        return self
 
 
 class QuestionInput(BaseModel):
@@ -66,6 +73,10 @@ class QuestionInput(BaseModel):
         if self.kind in {'single', 'reading', 'image'} and self.options and len(self.parts) != 1:
             raise ValueError('Choice questions require one scoring part')
         return self
+
+
+class QuestionOrderInput(BaseModel):
+    question_ids: list[str] = Field(max_length=500)
 
 
 class SaveResponse(BaseModel):

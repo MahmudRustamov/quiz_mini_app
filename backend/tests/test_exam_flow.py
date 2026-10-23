@@ -104,3 +104,29 @@ async def test_postgres_concurrent_start_and_submit_are_idempotent(client,db_ses
     assert all(r.status_code==200 for r in submits)
     async with db_session() as db:
         assert await db.scalar(select(func.count()).select_from(RawGrade))==4
+
+
+async def test_listing_endpoints_expire_due_attempts_without_locking_the_cohort(client,db_session):
+    teacher=await login(client,'teacher');student=await login(client);exam=await create_exam(client,teacher);a=await start(client,student,exam)
+    async with db_session.begin() as db:
+        attempt=await db.get(Attempt,a['id']);attempt.deadline=now()-timedelta(seconds=1)
+    mine=(await client.get('/api/attempts',headers=student)).json()
+    assert [row['status'] for row in mine]==['submitted']
+    listed=(await client.get('/api/teacher/attempts',headers=teacher)).json()
+    assert [row['status'] for row in listed]==['submitted']
+    filtered=(await client.get(f'/api/teacher/attempts?exam_id={exam["id"]}',headers=teacher)).json()
+    assert [row['status'] for row in filtered]==['submitted']
+    async with db_session() as db:
+        assert await db.scalar(select(func.count()).select_from(RawGrade))==4
+
+
+async def test_rankings_tolerate_a_blank_display_name(client,db_session):
+    teacher=await login(client,'teacher');admin=await login(client,'admin');student=await login(client)
+    exam=await create_exam(client,teacher);a=await start(client,student,exam)
+    assert (await client.post(f'/api/attempts/{a["id"]}/submit',headers=student)).status_code==200
+    async with db_session.begin() as db:
+        (await db.scalar(select(User).where(User.telegram_id==-1001))).name='   '
+    assert (await client.post(f'/api/admin/exams/{exam["id"]}/release',headers=admin,json={'results_published':True})).status_code==200
+    response=await client.get(f'/api/rankings?exam_id={exam["id"]}',headers=student)
+    assert response.status_code==200,response.text
+    assert [row['name'] for row in response.json()['rows']]==['Talaba']

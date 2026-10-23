@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     bot_token: str = ''
     admin_telegram_ids: list[int] = []
     session_minutes: int = 30
+    session_absolute_hours: int = 12
     init_data_max_age: int = 300
     cors_origins: list[str] = ['http://localhost:5173', 'http://127.0.0.1:5173']
     mini_app_url: str = 'http://localhost:5173'

@@ -38,6 +38,7 @@ class AuthSession(Base):
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class Exam(Base):
@@ -87,6 +88,7 @@ class Option(Base):
     question_id: Mapped[str] = mapped_column(ForeignKey('questions.id'), index=True)
     label: Mapped[str] = mapped_column(String(30))
     text: Mapped[str] = mapped_column(Text)
+    image_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class QuestionPart(Base):

@@ -4,6 +4,7 @@ import io
 import json
 from datetime import timedelta
 from pathlib import Path
+from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse, FileResponse, Response as HTTPResponse
 from pydantic import BaseModel, Field
@@ -15,14 +16,23 @@ from app.core.db import get_db
 from app.core.auth import current_user, teacher, admin, validate_init_data, create_session
 from app.models import *
 from app.schemas import *
-from app.repositories.exams import get_exam, editable_exam, owned_attempt, exam_data, replace_question, question_data
-from app.services.attempts import submit, snapshot, expire_if_due, audit
+from app.repositories.exams import get_exam, editable_exam, owned_attempt, exam_data, replace_question, question_data, remove_question, remove_passage, remove_exam, reorder_questions
+from app.services.attempts import submit, snapshot, expire_if_due, expire_due, audit
 from app.services.results import result_data, apply_calibration
 from app.services.grading import convert_essay, validate_lookup
 from app.services.imports import extract_pdf
+from app.services.drafts import delete_uploads_after_commit
 from app.psychometrics.rasch import calibrate
 
 router = APIRouter(prefix='/api')
+
+
+def display_name(name: str) -> str:
+    # Minimize public identity: first name and surname initial only.
+    names = name.split()
+    if not names:
+        return 'Talaba'
+    return names[0] + (f' {names[1][0]}.' if len(names) > 1 else '')
 
 
 def user_data(user):
@@ -45,7 +55,7 @@ async def telegram_login(payload: TelegramLogin, db: AsyncSession = Depends(get_
         raise HTTPException(401, 'Telegram ma’lumotlari tasdiqlanmadi')
     user = await db.scalar(select(User).where(User.telegram_id == data['id']))
     if not user:
-        user = User(telegram_id=data['id'], name=str(data.get('first_name', 'Talaba'))[:200],
+        user = User(telegram_id=data['id'], name=(str(data.get('first_name') or '').strip() or 'Talaba')[:200],
                     role='admin' if data['id'] in settings.admin_telegram_ids else 'student')
         db.add(user)
         await db.flush()
@@ -111,7 +121,8 @@ async def start_attempt(exam_id: str, user=Depends(current_user), db: AsyncSessi
 
 @router.get('/attempts', response_model=list[AttemptOutput])
 async def my_attempts(user=Depends(current_user), db: AsyncSession = Depends(get_db)):
-    attempts = (await db.scalars(select(Attempt).where(Attempt.user_id == user.id).order_by(Attempt.started_at.desc()).with_for_update())).all()
+    await expire_due(db, user_id=user.id)
+    attempts = (await db.scalars(select(Attempt).where(Attempt.user_id == user.id).order_by(Attempt.started_at.desc()))).all()
     output = []
     for attempt in attempts:
         data = await snapshot(db, attempt)
@@ -131,7 +142,7 @@ async def get_attempt(attempt_id: str, user=Depends(current_user), db: AsyncSess
     attempt = await owned_attempt(db, attempt_id, user)
     data = await snapshot(db, attempt)
     exam = await db.get(Exam, attempt.exam_id)
-    data['exam'] = await exam_data(db, exam, detail=True)
+    data['exam'] = await exam_data(db, exam, detail=True, shuffle_seed=attempt.id)
     return data
 
 
@@ -201,10 +212,7 @@ async def rankings(exam_id: str, user=Depends(current_user), db: AsyncSession = 
     for attempt in attempts:
         student = await db.get(User, attempt.user_id)
         result = await result_data(db, attempt)
-        # Minimize public identity: first name and surname initial only.
-        names = student.name.split()
-        display = names[0] + (f' {names[1][0]}.' if len(names) > 1 else '')
-        rows.append({'name': display, 'is_me': student.id == user.id, 'raw_percentage': result['raw_percentage'],
+        rows.append({'name': display_name(student.name), 'is_me': student.id == user.id, 'raw_percentage': result['raw_percentage'],
                      'final_score': result['final_score'], 'grade': result['grade']})
     rows.sort(key=lambda r: r['raw_percentage'], reverse=True)
     return {'rows': rows, 'message': 'Xom foiz bo‘yicha reyting · norasmiy sinov'}
@@ -251,6 +259,24 @@ async def create_passage(exam_id: str, payload: dict, user=Depends(teacher), db:
     return {'id': passage.id, 'title': passage.title, 'text': passage.text}
 
 
+@router.post('/teacher/exams/{exam_id}/images')
+async def upload_image(exam_id: str, file: UploadFile = File(...), user=Depends(teacher), db: AsyncSession = Depends(get_db)):
+    await editable_exam(db, exam_id)
+    maximum = get_settings().max_upload_mb * 1024 * 1024
+    content = await file.read(maximum + 1)
+    if len(content) > maximum:
+        raise HTTPException(413, 'Rasm hajmi ruxsat etilgan chegaradan oshdi')
+    if not content.startswith(b'\x89PNG\r\n\x1a\n'):
+        raise HTTPException(422, 'Faqat PNG formatidagi rasm yuklang')
+    directory = get_settings().upload_dir / exam_id
+    await run_in_threadpool(directory.mkdir, parents=True, exist_ok=True)
+    filename = f'{uuid4()}.png'
+    await run_in_threadpool((directory / filename).write_bytes, content)
+    path = f'{exam_id}/{filename}'
+    audit(db, user, 'exam.image_upload', exam_id, after={'path': path})
+    return {'path': path}
+
+
 @router.post('/teacher/exams/{exam_id}/questions')
 async def create_question(exam_id: str, payload: QuestionInput, user=Depends(teacher), db: AsyncSession = Depends(get_db)):
     await editable_exam(db, exam_id)
@@ -259,12 +285,45 @@ async def create_question(exam_id: str, payload: QuestionInput, user=Depends(tea
     return await question_data(db, q, True)
 
 
+@router.put('/teacher/exams/{exam_id}/questions/order')
+async def order_questions(exam_id: str, payload: QuestionOrderInput, user=Depends(teacher), db: AsyncSession = Depends(get_db)):
+    await editable_exam(db, exam_id)
+    before = await reorder_questions(db, exam_id, payload.question_ids)
+    audit(db, user, 'question.reorder', exam_id, before={'question_ids': before}, after=payload.model_dump())
+    return payload.model_dump()
+
+
 @router.put('/teacher/exams/{exam_id}/questions/{question_id}')
 async def update_question(exam_id: str, question_id: str, payload: QuestionInput, user=Depends(teacher), db: AsyncSession = Depends(get_db)):
     await editable_exam(db, exam_id)
     q = await replace_question(db, exam_id, payload, question_id)
     audit(db, user, 'question.update', q.id, after=payload.model_dump())
     return await question_data(db, q, True)
+
+
+@router.delete('/teacher/exams/{exam_id}/questions/{question_id}')
+async def delete_question(exam_id: str, question_id: str, user=Depends(teacher), db: AsyncSession = Depends(get_db)):
+    await editable_exam(db, exam_id)
+    before = await remove_question(db, exam_id, question_id)
+    audit(db, user, 'question.delete', question_id, before=before)
+    return {'ok': True}
+
+
+@router.delete('/teacher/exams/{exam_id}/passages/{passage_id}')
+async def delete_passage(exam_id: str, passage_id: str, user=Depends(teacher), db: AsyncSession = Depends(get_db)):
+    await editable_exam(db, exam_id)
+    before = await remove_passage(db, exam_id, passage_id)
+    audit(db, user, 'passage.delete', passage_id, before=before)
+    return {'ok': True}
+
+
+@router.delete('/teacher/exams/{exam_id}')
+async def delete_exam(exam_id: str, user=Depends(teacher), db: AsyncSession = Depends(get_db)):
+    exam = await editable_exam(db, exam_id)
+    before = await remove_exam(db, exam)
+    audit(db, user, 'exam.delete', exam_id, before=before)
+    delete_uploads_after_commit(db, exam_id)
+    return {'ok': True}
 
 
 class PublishInput(BaseModel):
@@ -299,12 +358,12 @@ async def publish_exam(exam_id: str, payload: PublishInput, user=Depends(teacher
 
 @router.get('/teacher/attempts')
 async def teacher_attempts(exam_id: str | None = None, user=Depends(teacher), db: AsyncSession = Depends(get_db)):
-    query = select(Attempt).order_by(Attempt.started_at.desc()).with_for_update()
+    await expire_due(db, exam_id=exam_id)
+    query = select(Attempt).order_by(Attempt.started_at.desc())
     if exam_id:
         query = query.where(Attempt.exam_id == exam_id)
     output = []
     for a in (await db.scalars(query)).all():
-        await expire_if_due(db, a)
         student = await db.get(User, a.user_id)
         exam = await db.get(Exam, a.exam_id)
         assessed = await db.scalar(select(func.count()).select_from(EssayAssessment).where(EssayAssessment.attempt_id == a.id))
@@ -470,7 +529,10 @@ async def asset(exam_id: str, filename: str, user=Depends(current_user), db: Asy
         if not attempt:
             raise HTTPException(404)
         questions = (await db.scalars(select(Question).where(Question.exam_id == exam_id))).all()
-        if f'{exam_id}/{filename}' not in {p for q in questions for p in q.image_paths}:
+        allowed = {p for q in questions for p in q.image_paths}
+        allowed.update((await db.scalars(select(Option.image_path).join(Question, Option.question_id == Question.id)
+                                        .where(Question.exam_id == exam_id, Option.image_path.is_not(None)))).all())
+        if f'{exam_id}/{filename}' not in allowed:
             raise HTTPException(404)
     await get_exam(db, exam_id)
     path = get_settings().upload_dir / exam_id / filename

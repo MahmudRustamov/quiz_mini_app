@@ -319,6 +319,7 @@ export function ResultDetail() {
               {question.image_paths.map((path) => (
                 <ProtectedImage key={path} path={path} alt="Savol rasmi" />
               ))}
+              {question.options.length > 0 && <div className="review-options">{question.options.map(option => <div key={option.label}><strong>{option.label}.</strong> {option.text}{option.image_path && <ProtectedImage path={option.image_path} alt={`${option.label} variant rasmi`} />}</div>)}</div>}
               {question.parts.map((part) => (
                 <div key={part.id} className="review-part">
                   <strong>

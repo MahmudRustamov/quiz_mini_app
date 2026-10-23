@@ -56,7 +56,8 @@ async def result_data(db, attempt, include_teacher=False):
     questions = (await db.scalars(select(Question).where(Question.exam_id == exam.id).order_by(Question.position))).all()
     by_part = {g.part_id: g for g in grades}
     for q in questions:
-        data = await question_data(db, q, include_teacher or exam.answer_released)
+        # Review shows the same arrangement the student answered in.
+        data = await question_data(db, q, include_teacher or exam.answer_released, attempt.id)
         qgrades = [by_part[p['id']] for p in data['parts'] if p['id'] in by_part]
         topic = topics.setdefault(q.topic, {'topic': q.topic, 'score': 0, 'maximum': 0})
         topic['score'] += sum(g.score or 0 for g in qgrades)

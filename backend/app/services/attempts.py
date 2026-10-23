@@ -29,8 +29,29 @@ async def submit(db, attempt):
 
 async def expire_if_due(db, attempt):
     if attempt.status == 'in_progress' and aware(attempt.deadline) <= now():
-        await submit(db, attempt)
+        # Auto-submission writes grades, so take the row lock here rather than trusting
+        # the caller: read-only paths such as snapshot() reach this too.
+        await db.refresh(attempt, with_for_update=True)
+        if attempt.status == 'in_progress':
+            await submit(db, attempt)
     return attempt
+
+
+async def expire_due(db, exam_id=None, user_id=None):
+    """Grade only the attempts whose deadline has passed, one locked row at a time.
+
+    Listing endpoints must never hold `FOR UPDATE` over every attempt: that blocks
+    answer saves and submissions for the whole cohort while the list is being built.
+    """
+    query = select(Attempt.id).where(Attempt.status == 'in_progress', Attempt.deadline <= now())
+    if exam_id:
+        query = query.where(Attempt.exam_id == exam_id)
+    if user_id:
+        query = query.where(Attempt.user_id == user_id)
+    for attempt_id in (await db.scalars(query)).all():
+        attempt = await db.scalar(select(Attempt).where(Attempt.id == attempt_id).with_for_update())
+        if attempt:
+            await expire_if_due(db, attempt)
 
 
 async def snapshot(db, attempt):

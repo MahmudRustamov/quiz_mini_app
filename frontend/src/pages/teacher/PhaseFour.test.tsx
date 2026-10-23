@@ -1,0 +1,98 @@
+import { useState } from "react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { api, post, put } from "../../services/api";
+import type { Exam, ImportDoc } from "../../types";
+import QuestionWorkspace from "./QuestionWorkspace";
+import ImportReview from "./ImportReview";
+import { blankQuestion, draftKey, newPart, type QuestionInput } from "./questionModel";
+import type { Passage } from "./PassagePicker";
+vi.mock("../../services/api", () => ({ api: vi.fn(), post: vi.fn(), put: vi.fn() }));
+vi.mock("../../components/ui", async importOriginal => ({ ...await importOriginal<typeof import("../../components/ui")>(), ProtectedImage: ({ path, alt }: { path: string; alt: string }) => <img src={`/assets/${path}`} alt={alt} /> }));
+const exam: Exam = { id: "exam", title: "Imtihon", subject: "Til", description: "", duration_minutes: 60, question_count: 0, status: "draft", certificate_thresholds: {}, essay_required: false, expert_count: 1, answer_released: false, results_published: false, questions: [] };
+const documents: ImportDoc[] = [{ id: "doc", source_name: "Imtihon.pdf", extracted: { verification_required: true, pages: [1, 2].map(page => ({ page, text: `Manba ${page}`, two_columns: false, scanned: false, page_image: `exam/page-${page}.png`, images: [], warnings: page === 2 ? ["Kalitni tekshiring"] : [] })) } }];
+beforeEach(() => vi.resetAllMocks());
+describe("passages and import review in the existing workspace", () => {
+  it("creates and selects a passage inline, shows 409 verbatim, deletes an unused passage, and keeps the draft", async () => {
+    let passages: Passage[] = [{ id: "p1", title: "Mavjud matn", text: "Birinchi matn" }];
+    const refresh = vi.fn<() => Promise<void>>();
+    vi.mocked(post).mockImplementation(async (_path, body) => {
+      const passage = { ...body as Pick<Passage, "title" | "text">, id: "p2" }; passages = [...passages, passage]; return passage;
+    });
+    vi.mocked(api).mockRejectedValueOnce(new Error("Matn savollarda ishlatilgan. Avval savollarni yangilang."));
+    function Harness() {
+      const [current, setCurrent] = useState({ ...exam, passages });
+      refresh.mockImplementation(async () => { setCurrent({ ...exam, passages }); });
+      return <QuestionWorkspace exam={current} onRefresh={refresh} />;
+    }
+    render(<Harness />); const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Savol turi"), "reading");
+    await user.type(screen.getByLabelText("Savol matni"), "Saqlansin");
+    await user.selectOptions(screen.getByLabelText("O‘qish matni"), "p1");
+    await user.click(screen.getByText("Yangi o‘qish matni"));
+    await user.type(screen.getByLabelText("Matn nomi"), "Yangi manba");
+    await user.type(screen.getByLabelText("Matn", { exact: true }), "Yangi matn");
+    await user.click(screen.getByRole("button", { name: "Matnni saqlash" }));
+    expect(post).toHaveBeenCalledExactlyOnceWith("/teacher/exams/exam/passages", { title: "Yangi manba", text: "Yangi matn" });
+    expect(screen.getByLabelText("O‘qish matni")).toHaveValue("p2");
+    expect(JSON.parse(localStorage.getItem(draftKey("exam", null))!).passage_id).toBe("p2");
+    expect(put).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /^Matnni o‘chirish$/ }));
+    await user.click(screen.getByRole("button", { name: "Matnni o‘chirishni tasdiqlash" }));
+    expect(await screen.findByText("Matn savollarda ishlatilgan. Avval savollarni yangilang.")).toHaveAttribute("role", "alert");
+    expect(screen.getByLabelText("O‘qish matni")).toHaveValue("p2");
+    vi.mocked(api).mockImplementationOnce(async () => { passages = passages.filter(p => p.id !== "p2"); return { ok: true }; });
+    await user.click(screen.getByRole("button", { name: "Matnni o‘chirishni tasdiqlash" }));
+    expect(api).toHaveBeenLastCalledWith("/teacher/exams/exam/passages/p2", { method: "DELETE" });
+    expect(screen.getByLabelText("O‘qish matni")).toHaveValue("");
+    expect(screen.getByLabelText("Savol matni")).toHaveValue("Saqlansin");
+    expect(JSON.parse(localStorage.getItem(draftKey("exam", null))!).passage_id).toBeNull();
+    expect(post).toHaveBeenCalledTimes(1); expect(put).not.toHaveBeenCalled();
+  });
+  it("flags missing imported keys even for manual review, updates from local buffers, and never publishes", async () => {
+    const input: QuestionInput = { ...blankQuestion(1, "short"), text: "Import qilingan", parts: [{ ...newPart(), manual_review: true }] };
+    render(<QuestionWorkspace exam={{ ...exam, questions: [{ ...input, id: "q1", parts: input.parts.map(p => ({ ...p, id: "part" })) }] }} onRefresh={vi.fn()} importDocs={documents} />);
+    const user = userEvent.setup();
+    expect(screen.getByText("Javob kaliti yo‘q")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "1 Import qilingan" }));
+    await user.click(screen.getByRole("button", { name: "+ Javob (main)" }));
+    await user.type(screen.getByLabelText("1-javob (main)"), "Javob");
+    expect(screen.queryByText("Javob kaliti yo‘q")).not.toBeInTheDocument();
+    expect(api).not.toHaveBeenCalled(); expect(post).not.toHaveBeenCalled(); expect(put).not.toHaveBeenCalled();
+    expect(screen.getByAltText("1-sahifa")).toHaveAttribute("src", "/assets/exam/page-1.png");
+  });
+  it("prevents authoring during an import and reports workspace mutations to the import controls", async () => {
+    const onBusyChange = vi.fn(), refresh = vi.fn().mockResolvedValue(undefined);
+    const view = render(<QuestionWorkspace exam={exam} onRefresh={refresh} disabled onBusyChange={onBusyChange} />);
+    expect(screen.getByLabelText("Savol turi")).toBeDisabled();
+    expect(screen.getByLabelText("Savol matni")).toBeDisabled();
+    expect(screen.getByLabelText("Savol rasmlari: PNG yuklash")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Yangi" })).toBeDisabled();
+    expect(post).not.toHaveBeenCalled(); expect(api).not.toHaveBeenCalled();
+    view.rerender(<QuestionWorkspace exam={exam} onRefresh={refresh} onBusyChange={onBusyChange} />);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Savol turi"), "reading");
+    await user.click(screen.getByText("Yangi o‘qish matni"));
+    await user.type(screen.getByLabelText("Matn", { exact: true }), "Matn");
+    let resolve!: (value: Passage) => void;
+    vi.mocked(post).mockImplementationOnce(() => new Promise<Passage>(done => { resolve = done; }));
+    await user.click(screen.getByRole("button", { name: "Matnni saqlash" }));
+    expect(onBusyChange).toHaveBeenLastCalledWith(true);
+    expect(screen.getByLabelText("Savol turi")).toBeDisabled();
+    resolve({ id: "created", title: "", text: "Matn" });
+    await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
+    expect(screen.getByLabelText("Savol turi")).toBeEnabled();
+  });
+  it("switches stored PDF pages without remounting the form, with source text and warnings", async () => {
+    render(<ImportReview documents={documents}><label>Savol matni<input aria-label="Savol matni" defaultValue="Qoralama" /></label></ImportReview>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Savol matni"), " saqlansin");
+    await user.selectOptions(screen.getByLabelText("PDF sahifasi"), "doc:2");
+    expect(screen.getByAltText("2-sahifa")).toHaveAttribute("src", "/assets/exam/page-2.png");
+    await user.click(screen.getByText("Ajratilgan matn va rasmlar"));
+    expect(within(screen.getByLabelText("PDF manbasi")).getByLabelText("Ajratilgan matn")).toHaveValue("Manba 2");
+    expect(screen.getByText("Kalitni tekshiring")).toBeVisible();
+    expect(screen.getByLabelText("Savol matni")).toHaveValue("Qoralama saqlansin");
+  });
+});

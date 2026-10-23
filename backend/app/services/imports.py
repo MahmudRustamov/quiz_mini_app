@@ -39,6 +39,11 @@ def extract_pdf(content: bytes, directory: Path, prefix: str, ocr=False):
         page.get_pixmap(matrix=pymupdf.Matrix(1.25, 1.25)).save(directory / filename)
         images = []
         for image in page.get_images(full=True)[:30]:
+            # get_images reports (xref, smask, width, height, ...). Checking the declared
+            # size first keeps a crafted PDF from decoding a gigapixel image into memory.
+            if image[2] * image[3] > 40_000_000:
+                warnings.append('Bitta rasm juda katta; sahifa tasviri saqlangan')
+                continue
             try:
                 pixmap = pymupdf.Pixmap(document, image[0])
                 if pixmap.n - pixmap.alpha > 3:

@@ -1516,6 +1516,19 @@ code {
   border-radius: 8px;
   margin: 15px 0;
 }
+.image-preview { display: block; max-width: 100%; min-width: 44px; min-height: 44px; cursor: zoom-in; border-radius: 8px; }
+.image-preview:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.image-preview .question-image { max-height: 320px; object-fit: contain; }
+.image-dialog { width: min(1000px, 94vw); max-width: 94vw; max-height: 90dvh; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); margin: auto; }
+.image-dialog::backdrop { background: #102631b3; }
+.image-dialog-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px; }
+.image-dialog-toolbar strong { flex: 1; min-width: 100px; }
+.image-dialog-toolbar .button { padding: 8px; }
+.image-dialog-content { max-height: 72dvh; overflow: auto; }
+.image-dialog-content img { display: block; max-width: none; height: auto; }
+.option-content { flex: 1; min-width: 0; }
+.matching-option-images, .review-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; margin: 16px 0; }
+.matching-option-card, .review-options > div { padding: 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
 .essay-editor {
   border-top: 1px solid var(--line);
   margin-top: 30px;
