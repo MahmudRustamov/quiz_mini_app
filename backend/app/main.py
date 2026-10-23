@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,17 +12,22 @@ async def lifespan(app):
     yield
     await engine.dispose()
 
+logger = logging.getLogger('uvicorn.error')
 settings = get_settings()
 app = FastAPI(title='Milliy Sertifikat API', version='1.0.0', lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins,
                    allow_credentials=False, allow_methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-                   allow_headers=['Authorization', 'Content-Type'])
+                   allow_headers=['Authorization', 'Content-Type', 'ngrok-skip-browser-warning'])
 app.include_router(router)
 
 
 @app.middleware('http')
 async def security_headers(request, call_next):
     response = await call_next(request)
+    if request.url.path in {'/api/config', '/api/auth/telegram', '/api/me'}:
+        logger.info('auth_request method=%s path=%s status=%s authorization_present=%s',
+                    request.method, request.url.path, response.status_code,
+                    'authorization' in request.headers)
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Cache-Control'] = 'no-store'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'

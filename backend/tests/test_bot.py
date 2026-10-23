@@ -90,7 +90,9 @@ async def test_disabled_poll_explains_bot_helper(monkeypatch):
         await bot_module.run_command('poll')
 
 
-def test_duplicate_local_polling_is_prevented():
+def test_duplicate_local_polling_is_prevented(tmp_path, monkeypatch):
+    # Keep the regression independent of the real bot running in this workspace.
+    monkeypatch.setattr(bot_module, '__file__', str(tmp_path / 'backend/app/bot/main.py'))
     with bot_module.polling_lock():
         with pytest.raises(RuntimeError, match='boshqa terminalda'):
             with bot_module.polling_lock():

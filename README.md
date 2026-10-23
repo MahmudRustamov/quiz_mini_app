@@ -202,3 +202,7 @@ Webhook authentication checks Telegram's secret header. There is no polling task
 Production startup rejects dev authentication, missing bot credentials, non-PostgreSQL databases and HTTP Mini App URLs. Set exact CORS origins; keep `.env`, database data and uploads out of Git. Free web services can sleep; initial requests may be delayed. Notifications have visible failures but no durable delivery queue. Review the remaining deployment hardening in [status.md](docs/status.md) before public use.
 
 Statistical implementation references: [SQLAlchemy async sessions](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) and [Rasch extreme-score estimation considerations](https://www.rasch.org/rmt/rmt122h.htm). The numerical method and assumptions are documented in `backend/app/psychometrics/rasch.py` and tested with simulated data; this is not an officially equated assessment.
+
+## Deployed login troubleshooting
+
+For the Vercel/ngrok deployment and the repaired `Load failed` issue, see [the reproduced failure, changed files, deployment steps and safe diagnostics](docs/login-load-failed.md). Production builds now require an explicit public HTTPS `VITE_API_URL`; local development still defaults to localhost. Use `VITE_API_URL=https://YOUR-BACKEND npm run build` for a deployment build.

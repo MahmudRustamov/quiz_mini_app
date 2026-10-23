@@ -75,3 +75,47 @@ async def test_local_cors_origins_are_explicit(client):
         assert response.headers['access-control-allow-origin']==origin
     response=await client.options('/api/auth/dev',headers={'Origin':'https://untrusted.example','Access-Control-Request-Method':'POST'})
     assert response.status_code==400
+
+
+async def test_ngrok_header_preflight_preserves_authorization_and_content_type(client):
+    response = await client.options('/api/auth/telegram', headers={
+        'Origin': 'http://localhost:5173',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization,content-type,ngrok-skip-browser-warning',
+    })
+    assert response.status_code == 200
+    assert response.headers['access-control-allow-origin'] == 'http://localhost:5173'
+    allowed = response.headers['access-control-allow-headers'].lower()
+    assert all(header in allowed for header in ['authorization', 'content-type', 'ngrok-skip-browser-warning'])
+    rejected = await client.options('/api/me', headers={
+        'Origin': 'https://untrusted.example',
+        'Access-Control-Request-Method': 'GET',
+        'Access-Control-Request-Headers': 'authorization,ngrok-skip-browser-warning',
+    })
+    assert rejected.status_code == 400
+    assert 'access-control-allow-origin' not in rejected.headers
+
+
+async def test_telegram_login_then_me_with_dev_auth_disabled(client, monkeypatch, caplog):
+    import logging
+    settings = get_settings()
+    monkeypatch.setattr(settings, 'bot_token', '123:production-auth-test')
+    monkeypatch.setattr(settings, 'dev_auth', False)
+    monkeypatch.setattr(settings, 'environment', 'production')
+    headers = {'Origin': 'http://localhost:5173', 'ngrok-skip-browser-warning': 'true'}
+    with caplog.at_level(logging.INFO, logger='uvicorn.error'):
+        assert (await client.get('/api/config', headers=headers)).json() == {'dev_auth': False}
+        response = await client.post('/api/auth/telegram', headers=headers,
+                                     json={'init_data': signed_data(token=settings.bot_token)})
+        assert response.status_code == 200
+        token = response.json()['access_token']
+        me = await client.get('/api/me', headers={**headers, 'Authorization': f'Bearer {token}'})
+        assert me.status_code == 200 and me.json()['telegram_id'] == 1234
+        assert (await client.post('/api/auth/dev', json={'account': 'admin'})).status_code == 404
+        invalid = await client.post('/api/auth/telegram', json={'init_data': 'PRIVATE_INITDATA_SENTINEL'})
+        assert invalid.status_code == 401
+    logs = caplog.text
+    assert 'path=/api/me status=200 authorization_present=True' in logs
+    assert token not in logs and settings.bot_token not in logs
+    assert 'PRIVATE_INITDATA_SENTINEL' not in logs
+    assert signed_data(token=settings.bot_token) not in logs

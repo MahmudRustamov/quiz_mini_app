@@ -19,26 +19,57 @@ bearer = HTTPBearer(auto_error=False)
 def aware(value):
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
-
 def validate_init_data(raw: str, token: str, max_age: int = 300) -> dict:
     pairs = parse_qsl(raw, keep_blank_values=True, strict_parsing=True)
     values = dict(pairs)
-    if len(values) != len(pairs) or not token:
-        raise ValueError('Invalid initData')
-    signature = values.pop('hash', '')
-    check = '\n'.join(f'{key}={value}' for key, value in sorted(values.items()))
-    secret = hmac.new(b'WebAppData', token.encode(), hashlib.sha256).digest()
-    expected = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(signature, expected):
-        raise ValueError('Invalid signature')
-    age = time.time() - int(values['auth_date'])
-    if age < -30 or age > max_age:
-        raise ValueError('Expired initData')
-    user = json.loads(values['user'])
-    if not isinstance(user.get('id'), int) or user['id'] <= 0:
-        raise ValueError('Invalid user')
-    return user
 
+    if len(values) != len(pairs) or not token:
+        raise ValueError("Invalid initData")
+
+    received_hash = values.pop("hash", "")
+
+    if not received_hash:
+        raise ValueError("Missing hash")
+
+    data_check_string = "\n".join(
+        f"{key}={value}"
+        for key, value in sorted(values.items())
+    )
+
+    secret_key = hmac.new(
+        b"WebAppData",
+        token.encode(),
+        hashlib.sha256
+    ).digest()
+
+    expected_hash = hmac.new(
+        secret_key,
+        data_check_string.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(received_hash, expected_hash):
+        raise ValueError("Invalid signature")
+
+    try:
+        auth_date = int(values["auth_date"])
+        user = json.loads(values["user"])
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError("Invalid Telegram data") from exc
+
+    age = time.time() - auth_date
+
+    if age < -30 or age > max_age:
+        raise ValueError("Expired initData")
+
+    if (
+        not isinstance(user, dict)
+        or type(user.get("id")) is not int
+        or user["id"] <= 0
+    ):
+        raise ValueError("Invalid user")
+
+    return user
 
 async def create_session(db: AsyncSession, user: User):
     token = secrets.token_urlsafe(48)

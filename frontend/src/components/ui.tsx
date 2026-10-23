@@ -5,7 +5,7 @@ import {
   LoaderCircle,
   TriangleAlert,
 } from "lucide-react";
-import { API_URL } from "../services/api";
+import { apiFetch } from "../services/api";
 export function Loading() {
   return (
     <div className="empty">
@@ -94,11 +94,7 @@ export function ProtectedImage({ path, alt }: { path: string; alt: string }) {
     let active = true;
     let object = "";
     setError(false);
-    fetch(`${API_URL}/api/assets/${path}`, {
-      headers: {
-        Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
-      },
-    })
+    apiFetch(`/assets/${path}`)
       .then((r) => {
         if (!r.ok) throw new Error();
         return r.blob();
