@@ -231,12 +231,18 @@ export default function Teacher() {
                     </Pill>
                   </td>
                   <td>
-                    <Link to={`/teacher/exams/${e.id}`} className="text-link">
-                      Boshqarish
-                      <ArrowRight size={16} />
-                    </Link>
-                    {e.status==='draft'&&<button className="text-link" style={{marginLeft:12}} disabled={busy} aria-label={`${e.title} imtihonini o‘chirish`}
-                      onClick={()=>{setError('');setPendingDelete(e);}}><Trash2 size={15}/>O‘chirish</button>}
+                    <div className="exam-table-actions">
+                      <Link to={`/teacher/exams/${e.id}`} className="text-link">
+                        Boshqarish
+                        <ArrowRight size={16} />
+                      </Link>
+                      {e.status === "draft" && (
+                        <button type="button" className="exam-delete-button" disabled={busy} aria-label={`${e.title} imtihonini o‘chirish`}
+                          onClick={() => { setError(""); setPendingDelete(e); }}>
+                          <Trash2 size={15} />O‘chirish
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -408,7 +414,7 @@ export function ExamEditor() {
             {/* A draft is deletable from here too, not only from the exam list. */}
             {editable && (
               <button
-                className="text-link"
+                className="exam-delete-button"
                 disabled={busy || reviewBusy}
                 aria-label={`${exam.title} imtihonini o‘chirish`}
                 onClick={() => {

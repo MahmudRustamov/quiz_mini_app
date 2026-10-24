@@ -1823,6 +1823,50 @@ td strong {
 td .text-link {
   font-size: 10px;
 }
+.exam-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  white-space: nowrap;
+}
+.exam-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #f3b7b7;
+  border-radius: 8px;
+  background: #fff1f1;
+  color: #b42332;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+.exam-delete-button svg {
+  flex-shrink: 0;
+}
+.exam-delete-button:hover:not(:disabled) {
+  background: #ffe1e1;
+  border-color: #e78c95;
+}
+.exam-delete-button:focus-visible {
+  outline: 2px solid #e05265;
+  outline-offset: 3px;
+}
+:root[data-theme="dark"] .exam-delete-button {
+  background: #3a222c;
+  border-color: #82404d;
+  color: #ffadb7;
+}
+:root[data-theme="dark"] .exam-delete-button:hover:not(:disabled) {
+  background: #502a36;
+  border-color: #b65c6e;
+}
 td select {
   min-width: 120px;
   font-size: 11px;
