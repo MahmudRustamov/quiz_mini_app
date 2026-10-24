@@ -11,29 +11,33 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --bg: #f5f7f9;
+  --bg: #eef2f6;
   --panel: #fff;
-  --text: #173044;
-  --muted: #657887;
-  --line: #e9eef2;
-  --soft: #f7f9fb;
+  --text: #122a3c;
+  --muted: #627587;
+  --line: #dce4ec;
+  --soft: #f4f7fa;
   --accent: #099c83;
-  --accent-soft: #e8f7f2;
+  --accent-soft: #e4f5ef;
   --navy: #102d3e;
-  --shadow: 0 4px 20px #15374d04;
+  --hero-from: #102d3e;
+  --hero-to: #103c43;
+  --shadow: 0 1px 2px #15374d0a, 0 6px 18px #15374d08;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0d1922;
+  --bg: #0b161e;
   --panel: #14242f;
-  --text: #e0ebf1;
-  --muted: #9aaebc;
-  --line: #263945;
+  --text: #e3edf3;
+  --muted: #94a9b8;
+  --line: #273a47;
   --soft: #192e3b;
   --accent: #46d5b5;
-  --accent-soft: #173d37;
+  --accent-soft: #15362f;
   --navy: #091e2c;
-  --shadow: 0 4px 20px #0001;
+  --hero-from: #16303f;
+  --hero-to: #16414a;
+  --shadow: 0 1px 2px #0003, 0 6px 18px #00000026;
   color: var(--text);
   background: var(--bg);
 }
@@ -468,7 +472,7 @@ code {
   overflow: hidden;
   min-height: 290px;
   border-radius: 15px;
-  background: linear-gradient(110deg, #102d3e, #103c43);
+  background: linear-gradient(110deg, var(--hero-from), var(--hero-to));
   color: #fff;
   padding: 32px 36px;
   display: flex;
@@ -668,6 +672,17 @@ code {
   padding: 19px 20px;
   position: relative;
   min-height: 129px;
+  transition:
+    border-color .18s ease,
+    transform .18s ease;
+}
+.stat-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat-card { transition: none; }
+  .stat-card:hover { transform: none; }
 }
 .stat-icon {
   position: absolute;
@@ -695,6 +710,10 @@ code {
   background: #fff3e4;
   color: #daa253;
 }
+:root[data-theme="dark"] .stat-icon.teal { background: #159f8126; color: #5bdcbd; }
+:root[data-theme="dark"] .stat-icon.blue { background: #658bd026; color: #8fb2ea; }
+:root[data-theme="dark"] .stat-icon.violet { background: #a08bd526; color: #bda9ec; }
+:root[data-theme="dark"] .stat-icon.orange { background: #daa25326; color: #e8bd7d; }
 .stat-label {
   display: block;
   font-size: 10px;
@@ -704,7 +723,7 @@ code {
 }
 .stat-card > strong {
   display: block;
-  font-size: 27px;
+  font-size: 30px;
   letter-spacing: -1px;
   font-weight: 650;
   line-height: 1.1;

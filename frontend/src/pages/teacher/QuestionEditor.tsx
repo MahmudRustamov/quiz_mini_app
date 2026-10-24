@@ -21,7 +21,11 @@ export default function QuestionEditor({ buffer, position, editing, editable, bu
   const [view, setView] = useState(() => supported ? "form" : "json");
   const [previewAnswers, setPreviewAnswers] = useState<Record<string, string>>({});
   const [pendingKind, setPendingKind] = useState<Kind | null>(null);
-  const update = (value: QuestionInput) => { setPreviewAnswers({}); onChange(encode(value)); };
+  // An untouched blank question is incomplete by definition; flagging it in red on open
+  // reads as breakage. The key strip and the status pill already say what is missing.
+  const [touched, setTouched] = useState(false);
+  const shown: typeof errors = touched ? errors : {};
+  const update = (value: QuestionInput) => { setTouched(true); setPreviewAnswers({}); onChange(encode(value)); };
   const changeKind = (kind: Kind) => {
     if (!data || kind === data.kind) return;
     if (losesData(data, kind)) setPendingKind(kind);
@@ -60,15 +64,15 @@ export default function QuestionEditor({ buffer, position, editing, editable, bu
         <p className="muted small">Sinab ko‘ring — bu javoblar saqlanmaydi.</p>
         <QuestionBody question={preview} answers={previewAnswers} onAnswer={setPreviewAnswers} passage={passages?.find(p => p.id === data?.passage_id)} />
       </section> : <>
-      {view === "json" || (!supported && view !== "preview") ? <label className="field">Savol tuzilishi<textarea aria-label="Savol tuzilishi" {...errorProps(errors, "json")} className="code-editor" rows={20} spellCheck={false} value={buffer} onChange={e => { setPreviewAnswers({}); onChange(e.target.value); }} /><FieldError errors={errors} path="json" /></label> : data && Editor && <>
-        <label className="field">Savol matni<textarea aria-label="Savol matni" {...errorProps(errors, "text")} rows={4} maxLength={50000} value={data.text} onChange={e => update({ ...data, text: e.target.value })} /><FieldError errors={errors} path="text" /></label>
-        <label className="field">Mavzu<input aria-label="Mavzu" {...errorProps(errors, "topic")} maxLength={100} value={data.topic} onChange={e => update({ ...data, topic: e.target.value })} /><FieldError errors={errors} path="topic" /></label>
+      {view === "json" || (!supported && view !== "preview") ? <label className="field">Savol tuzilishi<textarea aria-label="Savol tuzilishi" {...errorProps(shown, "json")} className="code-editor" rows={20} spellCheck={false} value={buffer} onChange={e => { setTouched(true); setPreviewAnswers({}); onChange(e.target.value); }} /><FieldError errors={shown} path="json" /></label> : data && Editor && <>
+        <label className="field">Savol matni<textarea aria-label="Savol matni" {...errorProps(shown, "text")} rows={4} maxLength={50000} value={data.text} onChange={e => update({ ...data, text: e.target.value })} /><FieldError errors={shown} path="text" /></label>
+        <label className="field">Mavzu<input aria-label="Mavzu" {...errorProps(shown, "topic")} maxLength={100} value={data.topic} onChange={e => update({ ...data, topic: e.target.value })} /><FieldError errors={shown} path="topic" /></label>
         {data.kind === "reading" && <PassagePicker passages={passages} value={data.passage_id} onChange={passage_id => update({ ...data, passage_id })} onCreatePassage={onCreatePassage} onDeletePassage={onDeletePassage} />}
-        <Editor value={data} onChange={update} errors={errors} onUpload={onUpload} />
+        <Editor value={data} onChange={update} errors={shown} onUpload={onUpload} />
       </>}
       {data && <ImageField label="Savol rasmlari" paths={data.image_paths} maximum={20} onUpload={onUpload} onChange={paths => update({ ...data, image_paths: paths })} />}
       </>}
-      {view !== "preview" && !ready && !errors.json && <ul className="question-validation" aria-label="Tekshirish kerak">{Object.entries(errors).map(([path, message]) => <li key={path}>{message}</li>)}</ul>}
+      {view !== "preview" && touched && !ready && !errors.json && <ul className="question-validation" aria-label="Tekshirish kerak">{Object.entries(errors).map(([path, message]) => <li key={path}>{message}</li>)}</ul>}
     </fieldset>
     <div className="question-answer-strip" aria-label="Javob kaliti">
       <div><strong>Javob kaliti</strong><div className="key-summary">{data?.parts.length ? data.parts.map((part, i) => <span key={`${part.label}-${i}`}>{part.label}: {part.accepted.join(" / ") || "kiritilmagan"}{part.manual_review ? " · qo‘lda tekshirish" : ""}</span>) : "Kalitni tekshiring"}</div></div>

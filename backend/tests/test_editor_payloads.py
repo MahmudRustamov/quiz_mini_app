@@ -46,9 +46,10 @@ async def test_form_editor_payloads_publish_and_grade(client, reordered):
     assert [q['position'] for q in attempt['exam']['questions']] == [1, 2, 3, 4]
     assert 'accepted' not in str(attempt)
     questions = {q['kind']: q for q in attempt['exam']['questions']}
-    # Matching reaches the student as one scoring part per pair plus the shuffleable options.
+    # Matching reaches the student as one scoring part per pair plus the options, whose
+    # order is shuffled per attempt — assert membership, never a fixed sequence.
     matching = questions['matching']
-    assert [o['label'] for o in matching['options']] == ['R1', 'R2']
+    assert sorted(o['label'] for o in matching['options']) == ['R1', 'R2']
     assert sorted(p['label'] for p in matching['parts']) == ['p1', 'p2']
 
     # B is answered off-key so the manual_review branch is exercised, not the exact match.
