@@ -17,11 +17,15 @@
   --muted: #627587;
   --line: #dce4ec;
   --soft: #f4f7fa;
-  --accent: #099c83;
-  --accent-soft: #e4f5ef;
-  --navy: #102d3e;
-  --hero-from: #102d3e;
-  --hero-to: #103c43;
+  --accent: #2f6fd6;
+  --accent-soft: #e6effc;
+  --accent-fill: #2f6fd6;
+  --accent-fill-hover: #2459ac;
+  --success: #157a52;
+  --success-soft: #e3f5ec;
+  --navy: #0f2a4a;
+  --hero-from: #0f2a4a;
+  --hero-to: #1b4f9c;
   --shadow: 0 1px 2px #15374d0a, 0 6px 18px #15374d08;
 }
 :root[data-theme="dark"] {
@@ -32,11 +36,15 @@
   --muted: #94a9b8;
   --line: #273a47;
   --soft: #192e3b;
-  --accent: #46d5b5;
-  --accent-soft: #15362f;
-  --navy: #091e2c;
-  --hero-from: #16303f;
-  --hero-to: #16414a;
+  --accent: #6ea0ee;
+  --accent-soft: #17315a;
+  --accent-fill: #3d7fe3;
+  --accent-fill-hover: #5b94ec;
+  --success: #5fd3a0;
+  --success-soft: #14382b;
+  --navy: #091a30;
+  --hero-from: #16315c;
+  --hero-to: #1d4a8c;
   --shadow: 0 1px 2px #0003, 0 6px 18px #00000026;
   color: var(--text);
   background: var(--bg);
@@ -141,10 +149,10 @@ code {
   overflow-wrap: anywhere;
 }
 ::selection {
-  background: #0a9e8230;
+  background: #2f6fd630;
 }
 :focus-visible {
-  outline: 3px solid #28b99a;
+  outline: 3px solid var(--accent);
   outline-offset: 4px;
 }
 .app-shell {
@@ -180,7 +188,7 @@ code {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: white;
   box-shadow: 0 6px 13px #0a9e8220;
 }
@@ -274,7 +282,7 @@ code {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #25b799;
+  background: var(--accent-fill);
   flex-shrink: 0;
 }
 .main-shell {
@@ -415,12 +423,12 @@ code {
   transform: translateY(-1px);
 }
 .button.primary {
-  background: #07977e;
+  background: var(--accent-fill);
   color: #fff;
-  box-shadow: 0 4px 9px #07977e10;
+  box-shadow: 0 4px 9px #2f6fd61a;
 }
 .button.primary:hover {
-  background: #087e6a;
+  background: var(--accent-fill-hover);
 }
 .button.secondary {
   background: var(--panel);
@@ -500,7 +508,7 @@ code {
   font-size: 8px;
   font-weight: 650;
   letter-spacing: 1.6px;
-  color: #a0c6bf;
+  color: #a6c0e6;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -513,7 +521,7 @@ code {
   margin: 17px 0 12px;
 }
 .hero h2 > span {
-  color: #6bd1b8;
+  color: #a8c8f7;
 }
 .hero p {
   font-size: 11px;
@@ -522,7 +530,7 @@ code {
 }
 .hero-button {
   background: #fff;
-  color: #183d40;
+  color: #14305a;
   margin-top: 23px;
   min-height: 40px;
   padding: 11px 17px;
@@ -536,7 +544,7 @@ code {
   margin-top: 16px;
 }
 .hero-small-icon {
-  border: 1px solid #6b9f9b;
+  border: 1px solid #7f9fd4;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -568,8 +576,8 @@ code {
   position: relative;
   width: 168px;
   height: 208px;
-  background: #fcfffc;
-  border: 7px solid #d2e7dc;
+  background: #fbfdff;
+  border: 7px solid #d0def3;
   border-radius: 9px;
   transform: rotate(12deg);
   box-shadow: 15px 22px 20px #031d2a44;
@@ -631,7 +639,7 @@ code {
   position: absolute;
   left: 30px;
   top: 17px;
-  color: #88bd9c;
+  color: #8db0e4;
   transform: rotate(-14deg);
 }
 .floating-check {
@@ -639,24 +647,24 @@ code {
   right: -9px;
   bottom: 25px;
   background: #ffffffed;
-  border: 1px solid #e2ede7;
+  border: 1px solid #dde7f5;
   box-shadow: 0 5px 15px #061a2c15;
   transform: rotate(-6deg);
   border-radius: 9px;
   padding: 11px 15px;
   display: flex;
   gap: 9px;
-  color: #139579;
+  color: #1f9d6b;
   align-items: center;
 }
 .floating-check span {
   font-size: 8px;
-  color: #60746e;
+  color: #5a6b82;
   line-height: 1.7;
 }
 .floating-check strong {
   font-size: 10px;
-  color: #294d42;
+  color: #1f3a63;
 }
 .stats-grid {
   display: grid;
@@ -846,8 +854,8 @@ code {
   gap: 4px;
 }
 .pill.green {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--success);
+  background: var(--success-soft);
 }
 .pill.amber {
   color: #9b6c10;
@@ -939,20 +947,20 @@ code {
   padding: 25px 24px;
   border-radius: 11px;
   margin-top: 21px;
-  background: #eaf3ec;
+  background: #e8f0fb;
   overflow: hidden;
-  border: 1px solid #dfebe3;
-  color: #294d3d;
+  border: 1px solid #d8e4f5;
+  color: #1f3a63;
 }
 .tip-icon {
-  color: #6b927e;
+  color: #6b8fc4;
   display: block;
   margin-bottom: 17px;
 }
 .tip-card .eyebrow {
   font-size: 8px;
   letter-spacing: 1.5px;
-  color: #53745e;
+  color: #4a6a9c;
 }
 .tip-card h3 {
   font-size: 20px;
@@ -974,7 +982,7 @@ code {
   margin-top: 20px;
   font-size: 10px;
   font-weight: 650;
-  color: #3d6c55;
+  color: #2f5aa0;
 }
 .attempt-list {
   padding: 0 23px;
@@ -1098,8 +1106,8 @@ code {
   display: flex;
   align-items: center;
   gap: 9px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--success-soft);
+  color: var(--success);
   padding: 13px 17px;
   border-radius: 8px;
   font-size: 12px;
@@ -1162,7 +1170,7 @@ code {
   grid-template-columns: 1.05fr 1fr;
 }
 .login-art {
-  background: radial-gradient(ellipse at 90% 80%, #16574e, #102d3e 70%);
+  background: radial-gradient(ellipse at 90% 80%, #1b4f9c, #0f2a4a 70%);
   color: white;
   display: flex;
   flex-direction: column;
@@ -1191,7 +1199,7 @@ code {
   margin-bottom: 38px;
 }
 .login-art .eyebrow {
-  color: #78cdb7;
+  color: #a8c8f7;
   font-size: 10px;
 }
 .login-art h1 {
@@ -1288,7 +1296,7 @@ code {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--accent);
+  color: var(--success);
   font-size: 10px;
 }
 .progress-track {
@@ -1298,7 +1306,7 @@ code {
   overflow: hidden;
 }
 .progress-track > div {
-  background: #0da487;
+  background: var(--accent-fill);
   height: 100%;
   border-radius: 8px;
   transition: width 0.3s;
@@ -1409,7 +1417,7 @@ code {
 }
 .chosen .option-letter {
   border-color: transparent;
-  background: #0c9b81;
+  background: var(--accent-fill);
   color: white;
 }
 .option-check {
@@ -1495,7 +1503,7 @@ code {
   border-radius: 2px;
 }
 .legend-dot.answered {
-  background: #0eaa8a;
+  background: var(--accent-fill);
 }
 .legend-dot.flagged {
   background: #e2ad4c;

@@ -109,7 +109,7 @@ export function ResultDetail() {
   if (q.error) return <ErrorBox error={q.error} />;
   const r = q.data!;
   const slices = [
-    { name: "To‘g‘ri", value: r.correct, color: "#10a78c" },
+    { name: "To‘g‘ri", value: r.correct, color: "#1f9d6b" },
     { name: "Noto‘g‘ri", value: r.incorrect, color: "#e78079" },
     { name: "Javobsiz", value: r.unanswered, color: "#dfe7ed" },
     { name: "Tekshirilmoqda", value: r.pending_parts, color: "#e8b963" },
@@ -278,7 +278,7 @@ export function ResultDetail() {
               isAnimationActive={false}
               dataKey="foiz"
               name="Natija %"
-              fill="#10a78c"
+              fill="#3b7ae0"
               radius={[0, 5, 5, 0]}
               barSize={18}
             />

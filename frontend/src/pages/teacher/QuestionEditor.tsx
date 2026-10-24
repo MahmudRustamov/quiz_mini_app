@@ -9,7 +9,7 @@ import MatchingEditor from "./MatchingEditor";
 import ShortAnswerEditor from "./ShortAnswerEditor";
 import TwoPartEditor from "./TwoPartEditor";
 import { errorProps, FieldError } from "./PartFields";
-import { canUseForm, encode, inspectBuffer, kinds, losesData, switchKind, type Kind, type QuestionInput, type UploadImage } from "./questionModel";
+import { blankQuestion, canUseForm, encode, inspectBuffer, kinds, losesData, switchKind, type Kind, type QuestionInput, type UploadImage } from "./questionModel";
 
 export default function QuestionEditor({ buffer, position, editing, editable, busy, onChange, onSave, onUpload, examId, passages, onCreatePassage, onDeletePassage }: PassageActions & {
   buffer: string; position: number; editing: boolean; editable: boolean; busy: boolean;
@@ -23,7 +23,8 @@ export default function QuestionEditor({ buffer, position, editing, editable, bu
   const [pendingKind, setPendingKind] = useState<Kind | null>(null);
   // An untouched blank question is incomplete by definition; flagging it in red on open
   // reads as breakage. The key strip and the status pill already say what is missing.
-  const [touched, setTouched] = useState(false);
+  // A restored draft is not untouched: only a question still equal to its own blank counts as pristine.
+  const [touched, setTouched] = useState(() => !data || JSON.stringify(data) !== JSON.stringify(blankQuestion(position, data.kind)));
   const shown: typeof errors = touched ? errors : {};
   const update = (value: QuestionInput) => { setTouched(true); setPreviewAnswers({}); onChange(encode(value)); };
   const changeKind = (kind: Kind) => {
@@ -64,13 +65,13 @@ export default function QuestionEditor({ buffer, position, editing, editable, bu
         <p className="muted small">Sinab ko‘ring — bu javoblar saqlanmaydi.</p>
         <QuestionBody question={preview} answers={previewAnswers} onAnswer={setPreviewAnswers} passage={passages?.find(p => p.id === data?.passage_id)} />
       </section> : <>
-      {view === "json" || (!supported && view !== "preview") ? <label className="field">Savol tuzilishi<textarea aria-label="Savol tuzilishi" {...errorProps(shown, "json")} className="code-editor" rows={20} spellCheck={false} value={buffer} onChange={e => { setTouched(true); setPreviewAnswers({}); onChange(e.target.value); }} /><FieldError errors={shown} path="json" /></label> : data && Editor && <>
+      {view === "json" || (!supported && view !== "preview") ? <><label className="field">Savol tuzilishi<textarea aria-label="Savol tuzilishi" {...errorProps(shown, "json")} className="code-editor" rows={20} spellCheck={false} value={buffer} onChange={e => { setTouched(true); setPreviewAnswers({}); onChange(e.target.value); }} /><FieldError errors={shown} path="json" /></label>{data && <ImageField label="Savol rasmlari" paths={data.image_paths} maximum={20} onUpload={onUpload} onChange={paths => update({ ...data, image_paths: paths })} />}</> : data && Editor && <>
         <label className="field">Savol matni<textarea aria-label="Savol matni" {...errorProps(shown, "text")} rows={4} maxLength={50000} value={data.text} onChange={e => update({ ...data, text: e.target.value })} /><FieldError errors={shown} path="text" /></label>
+        <ImageField label="Savol rasmlari" paths={data.image_paths} maximum={20} onUpload={onUpload} onChange={paths => update({ ...data, image_paths: paths })} />
         <label className="field">Mavzu<input aria-label="Mavzu" {...errorProps(shown, "topic")} maxLength={100} value={data.topic} onChange={e => update({ ...data, topic: e.target.value })} /><FieldError errors={shown} path="topic" /></label>
         {data.kind === "reading" && <PassagePicker passages={passages} value={data.passage_id} onChange={passage_id => update({ ...data, passage_id })} onCreatePassage={onCreatePassage} onDeletePassage={onDeletePassage} />}
         <Editor value={data} onChange={update} errors={shown} onUpload={onUpload} />
       </>}
-      {data && <ImageField label="Savol rasmlari" paths={data.image_paths} maximum={20} onUpload={onUpload} onChange={paths => update({ ...data, image_paths: paths })} />}
       </>}
       {view !== "preview" && touched && !ready && !errors.json && <ul className="question-validation" aria-label="Tekshirish kerak">{Object.entries(errors).map(([path, message]) => <li key={path}>{message}</li>)}</ul>}
     </fieldset>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import QuestionEditor from "./QuestionEditor";
@@ -23,10 +23,24 @@ async function common(user: ReturnType<typeof userEvent.setup>) {
 const shared = { position: 3, text: "Savol matni?", topic: "Tilshunoslik", passage_id: null, image_paths: [] };
 
 describe("question forms and exact API payloads", () => {
+  it("offers option images only for picture questions, or when an option already has one", () => {
+    const upload = vi.fn();
+    const first = setup("single", undefined, upload);
+    expect(screen.queryByLabelText("A variant rasmi: PNG yuklash")).toBeNull();
+    expect(screen.getByLabelText("Savol rasmlari: PNG yuklash")).toBeInTheDocument();
+    cleanup(); void first;
+    setup("image", undefined, upload);
+    for (const label of ["A", "B", "C", "D"]) expect(screen.getByLabelText(`${label} variant rasmi: PNG yuklash`)).toBeInTheDocument();
+    cleanup();
+    // A plain test that already carries an option image must not hide data students will see.
+    const legacy = blankQuestion(3);
+    setup("single", { ...legacy, options: legacy.options.map((o, i) => i ? o : { ...o, image_path: "exam/old.png" }) }, upload);
+    expect(screen.getByLabelText("A variant rasmi: PNG yuklash")).toBeInTheDocument();
+  });
   it("saves image-only choices and question images, synchronizes JSON, and validates removal", async () => {
-    const initial = { ...blankQuestion(3), text: "Rasmni tanlang", options: blankQuestion(3).options.map((o, i) => ({ ...o, text: i ? `${o.label} matn` : "" })), parts: [{ ...newPart(), accepted: ["A"] }] };
+    const initial = { ...blankQuestion(3, "image"), text: "Rasmni tanlang", options: blankQuestion(3).options.map((o, i) => ({ ...o, text: i ? `${o.label} matn` : "" })), parts: [{ ...newPart(), accepted: ["A"] }] };
     const upload = vi.fn().mockResolvedValueOnce("exam/question.png").mockResolvedValueOnce("exam/option.png");
-    const { user, save } = setup("single", initial, upload);
+    const { user, save } = setup("image", initial, upload);
     await user.upload(screen.getByLabelText("Savol rasmlari: PNG yuklash"), new File(["png"], "question.png", { type: "image/png" }));
     expect(screen.getByRole("button", { name: "Savolni saqlash" })).toBeDisabled();
     await user.upload(screen.getByLabelText("A variant rasmi: PNG yuklash"), new File(["png"], "option.png", { type: "image/png" }));

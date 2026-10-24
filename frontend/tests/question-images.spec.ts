@@ -57,6 +57,7 @@ async function setup(page: Page, student = false) {
 
 test("question and image-only choice upload, zoom, reopen, duplicate and removal preserve data", async ({ page }, testInfo) => {
   const { writes } = await setup(page); await page.goto("/teacher/exams/images-exam");
+  await page.getByLabel("Savol turi", { exact: true }).selectOption("image");
   await page.getByLabel("Savol matni", { exact: true }).fill("Rasmli savol");
   for (const label of ["B", "C", "D"]) await page.getByLabel(`${label} variant`, { exact: true }).fill(`${label} matn`);
   await page.getByRole("radio", { name: "A", exact: true }).check();
@@ -110,8 +111,9 @@ test("students can zoom and select image-only choices and matching images, then 
   await expect(page.getByRole("dialog")).toBeVisible(); await page.keyboard.press("Escape"); await expect(radio).not.toBeChecked();
   await page.locator(".answer-option").first().click({ position: { x: 20, y: 20 } }); await expect(radio).toBeChecked();
   await expect.poll(() => responses.length).toBe(1); expect(responses[0].answers).toEqual({ main: "A" });
-  await page.getByRole("button", { name: "Keyingi", exact: true }).click(); await expect(page.getByAltText("R1 variant rasmi")).toBeVisible();
-  await page.getByLabel("p1 uchun javob", { exact: true }).selectOption("R1"); await expect.poll(() => responses.length).toBe(2);
+  await page.getByRole("button", { name: "Keyingi", exact: true }).click(); await expect(page.getByAltText("1 variant rasmi")).toBeVisible();
+  // The student sees served positions and the left-hand text; the stored label stays the value.
+  await page.getByLabel("Chap matn uchun javob", { exact: true }).selectOption("R1"); await expect.poll(() => responses.length).toBe(2);
   expect(responses[1].answers).toEqual({ p1: "R1" });
   await page.goto("/results/image-attempt"); await page.locator(".review-item").first().locator("summary").click();
   await expect(page.getByAltText("A variant rasmi")).toBeVisible(); await page.locator(".review-item").nth(1).locator("summary").click();

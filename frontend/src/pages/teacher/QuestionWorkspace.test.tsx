@@ -50,6 +50,7 @@ describe("question positioning inside the existing workspace", () => {
   it("owns image uploads, sends multipart FormData, and autosaves the returned path without saving a question", async () => {
     const { user } = setup(); vi.mocked(api).mockResolvedValueOnce({ path: "order-exam/upload.png" });
     const file = new File(["png"], "diagram.png", { type: "image/png" });
+    await user.selectOptions(screen.getByLabelText("Savol turi"), "image");
     await user.upload(screen.getByLabelText("A variant rasmi: PNG yuklash"), file);
     expect(api).toHaveBeenCalledTimes(1);
     const [path, options] = vi.mocked(api).mock.calls[0];

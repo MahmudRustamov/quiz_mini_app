@@ -214,10 +214,10 @@ export default function Dashboard() {
                     >
                       <stop
                         offset="0%"
-                        stopColor="#0caa8d"
+                        stopColor="#3b7ae0"
                         stopOpacity={0.22}
                       />
-                      <stop offset="100%" stopColor="#0caa8d" stopOpacity={0} />
+                      <stop offset="100%" stopColor="#3b7ae0" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
@@ -244,7 +244,7 @@ export default function Dashboard() {
                     type="monotone"
                     dataKey="foiz"
                     name="Natija %"
-                    stroke="#0caa8d"
+                    stroke="#3b7ae0"
                     strokeWidth={3}
                     fill="url(#performance)"
                   />
