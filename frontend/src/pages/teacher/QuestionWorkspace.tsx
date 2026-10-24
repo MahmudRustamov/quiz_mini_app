@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Exam, ImportDoc, Question } from "../../types";
 import { api, post, put } from "../../services/api";
-import { Empty, ErrorBox, Pill, SectionTitle } from "../../components/ui";
+import { Empty, ErrorBox, SectionTitle } from "../../components/ui";
 import DeleteConfirmation from "./DeleteConfirmation";
 import ImportReview from "./ImportReview";
 import type { Passage } from "./PassagePicker";
 import QuestionEditor from "./QuestionEditor";
+import QuestionRow from "./QuestionRow";
 import { blankQuestion, draftKey, encode, inspectBuffer, readDraft, toInput, validateQuestion, type QuestionInput } from "./questionModel";
 import "./question-editor.css";
 
@@ -167,23 +168,14 @@ export default function QuestionWorkspace({ exam, onRefresh, importDocs, disable
       <div className="panel question-list-panel"><SectionTitle title="Savollar"><button className="text-link" disabled={!editable || busy || questions.length >= 500} onClick={() => { setSelected(null); setInsertTarget(null); setError(""); setMessage(""); }}>Yangi<Plus size={16} /></button></SectionTitle>
         <p className="muted small" aria-label="Savollar holati">{ready} tayyor · {questions.length - ready} tekshiruv kerak</p>
         {questions.length ? questions.map(q => {
-          const valid = validity.get(q.id)?.ready;
-          return <div className={`editor-question ${activeId === q.id ? "active" : ""}`} key={q.id}>
-            <span>{q.position}</span><button className="question-rail-select" aria-label={`${q.position} ${q.text}`} disabled={busy} onClick={() => { setSelected(q.id); setError(""); setMessage(""); }}>
-              <strong>{q.text.slice(0, 70)}</strong><small>{q.kind} · {q.topic}</small><Pill tone={valid ? "green" : "amber"}>{valid ? "Tayyor" : "Tekshiruv kerak"}</Pill>{importDocs && validity.get(q.id)?.missingKey && <Pill tone="amber">Javob kaliti yo‘q</Pill>}
-            </button>{editable && <button className="text-link" aria-label={`${q.position}-savolni o‘chirish`} disabled={busy} onClick={() => { setError(""); setPendingDelete(q); }}><Trash2 size={15} /></button>}
-            {editable && activeId === q.id && <div className="question-order-controls" aria-label="Savol joylashuvi">
-              <div className="question-move-controls">
-                <button className="text-link" title="Yuqoriga" aria-label={`${q.position}-savolni yuqoriga ko‘chirish`} disabled={busy || q.position === 1} onClick={() => moveTo(q, String(q.position - 1))}><ArrowUp size={16} /></button>
-                <button className="text-link" title="Pastga" aria-label={`${q.position}-savolni pastga ko‘chirish`} disabled={busy || q.position === questions.length} onClick={() => moveTo(q, String(q.position + 1))}><ArrowDown size={16} /></button>
-                <label>O‘rin<input aria-label={`${q.position}-savolni ko‘chirish manzili`} type="number" inputMode="numeric" min={1} max={questions.length} step={1} disabled={busy} value={moveEntry?.id === q.id ? moveEntry.value : q.position} onChange={e => setMoveEntry({ id: q.id, value: e.target.value })} onBlur={e => moveTo(q, e.currentTarget.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); moveTo(q, e.currentTarget.value); } }} /></label>
-              </div>
-              <div className="question-insert-controls">
-                {[false, true].map(after => <button key={String(after)} className="text-link" disabled={busy || questions.length >= 500} onClick={() => { setInsertTarget({ anchorId: q.id, after }); setSelected(null); setError(""); setMessage(""); }}>{after ? "+ Pastiga" : "+ Yuqorisiga"}</button>)}
-                <button className="text-link" disabled={busy || questions.length >= 500} onClick={() => void createAtEnd(toInput(q), { anchorId: q.id, after: true }, false)}><Copy size={14} />Nusxa</button>
-              </div>
-            </div>}
-          </div>;
+          const state = validity.get(q.id);
+          return <QuestionRow key={q.id} question={q} count={questions.length} active={activeId === q.id} ready={!!state?.ready}
+            flagMissingKey={!!importDocs && !!state?.missingKey} editable={editable} busy={busy} full={questions.length >= 500}
+            moveValue={moveEntry?.id === q.id ? moveEntry.value : String(q.position)} onMoveValueChange={value => setMoveEntry({ id: q.id, value })} onMoveTo={raw => moveTo(q, raw)}
+            onSelect={() => { setSelected(q.id); setError(""); setMessage(""); }}
+            onInsert={after => { setInsertTarget({ anchorId: q.id, after }); setSelected(null); setError(""); setMessage(""); }}
+            onDuplicate={() => void createAtEnd(toInput(q), { anchorId: q.id, after: true }, false)}
+            onDelete={() => { setError(""); setPendingDelete(q); }} />;
         }) : <Empty title="Savol yo‘q" description="Savol qo‘shing yoki import qiling." />}
       </div>
       {importDocs ? <ImportReview documents={importDocs}>{editor}</ImportReview> : editor}

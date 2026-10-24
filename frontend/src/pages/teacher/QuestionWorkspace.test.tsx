@@ -43,6 +43,7 @@ async function fillNew(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "+ Javob (main)" }));
   await user.type(screen.getByLabelText("1-javob (main)"), "yangi javob");
 }
+const openMenu = (user: ReturnType<typeof userEvent.setup>, position: number) => user.click(screen.getByRole("button", { name: `${position}-savol amallari` }));
 const orderCalls = () => vi.mocked(put).mock.calls.map(([path, body]) => ({ path, body }));
 beforeEach(() => { vi.resetAllMocks(); });
 
@@ -75,7 +76,9 @@ describe("question positioning inside the existing workspace", () => {
   it.each([false, true])("inserts %s below the anchor only after an explicit valid save at the free end slot", async after => {
     const { user, rows } = setup();
     await user.click(screen.getByRole("button", { name: "2 Savol 2" }));
-    await user.click(screen.getByRole("button", { name: after ? "+ Pastiga" : "+ Yuqorisiga" }));
+    await openMenu(user, 2);
+    await user.click(screen.getByRole("button", { name: after ? "Pastiga qo‘shish" : "Yuqorisiga qo‘shish" }));
+    expect(screen.queryByRole("group", { name: "2-savol amallari" })).not.toBeInTheDocument();
     expect(post).not.toHaveBeenCalled(); expect(put).not.toHaveBeenCalled();
     await fillNew(user); expect(post).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Savolni saqlash" }));
@@ -93,27 +96,35 @@ describe("question positioning inside the existing workspace", () => {
     const original = model.encode({ ...model.toInput(makeQuestions(5)[2]), text: "Qurilmadagi qoralama" });
     localStorage.setItem(model.draftKey(examBase.id, "q3"), original);
     const { user } = setup(); await user.click(screen.getByRole("button", { name: "3 Savol 3" }));
+    await openMenu(user, 3);
     await user.click(screen.getByRole("button", { name: "3-savolni yuqoriga ko‘chirish" }));
     await screen.findByText("Savollar tartibi saqlandi");
     expect(orderCalls()[0].body).toEqual({ question_ids: ["q1", "q3", "q2", "q4", "q5"] });
     expect(screen.getByLabelText("Savol matni")).toHaveValue("Qurilmadagi qoralama");
     expect(localStorage.getItem(model.draftKey(examBase.id, "q3"))).toBe(original);
+    // A move closes the menu: the row shifts, and a menu that followed would jump under the cursor.
+    expect(screen.queryByRole("group", { name: /savol amallari/ })).not.toBeInTheDocument();
+    await openMenu(user, 2);
     await user.click(screen.getByRole("button", { name: "2-savolni pastga ko‘chirish" }));
     await waitFor(() => expect(put).toHaveBeenCalledTimes(2));
     expect(orderCalls()[1].body).toEqual({ question_ids: ["q1", "q2", "q3", "q4", "q5"] });
     expect(post).not.toHaveBeenCalled(); expect(api).not.toHaveBeenCalled();
   });
 
-  it("moves question 40 to slot 3 and then slot 48 with Enter/blur", async () => {
+  it("moves question 40 to slot 3 with Enter and then to slot 48 with the confirm button", async () => {
     const { user, rows } = setup(50);
     await user.click(screen.getByRole("button", { name: "40 Savol 40" }));
+    await openMenu(user, 40);
     const input = screen.getByLabelText("40-savolni ko‘chirish manzili");
     await user.clear(input); await user.type(input, "3"); await user.keyboard("{Enter}");
     await screen.findByText("Savollar tartibi saqlandi");
     const first = makeQuestions(50).map(q => q.id); first.splice(39, 1); first.splice(2, 0, "q40");
     expect(orderCalls()[0].body).toEqual({ question_ids: first }); expect(rows()[2].id).toBe("q40");
+    expect(screen.queryByRole("group", { name: /savol amallari/ })).not.toBeInTheDocument();
+    await openMenu(user, 3);
     const moved = screen.getByLabelText("3-savolni ko‘chirish manzili");
-    fireEvent.change(moved, { target: { value: "48" } }); fireEvent.blur(moved);
+    fireEvent.change(moved, { target: { value: "48" } });
+    await user.click(screen.getByRole("button", { name: "3-savolni shu o‘ringa ko‘chirish" }));
     await waitFor(() => expect(put).toHaveBeenCalledTimes(2));
     const second = first.filter(id => id !== "q40"); second.splice(47, 0, "q40");
     expect(orderCalls()[1].body).toEqual({ question_ids: second }); expect(rows()[47].id).toBe("q40");
@@ -121,8 +132,10 @@ describe("question positioning inside the existing workspace", () => {
 
   it.each([["0", 1], ["6", 5], ["abc", 3], ["3", 3], ["2.5", 3], ["", 3]])("clamps or ignores target %s", async (raw, final) => {
     const { user, rows } = setup(); await user.click(screen.getByRole("button", { name: "3 Savol 3" }));
+    await openMenu(user, 3);
     const input = screen.getByLabelText("3-savolni ko‘chirish manzili");
-    fireEvent.change(input, { target: { value: raw } }); fireEvent.blur(input);
+    fireEvent.change(input, { target: { value: raw } });
+    await user.click(screen.getByRole("button", { name: "3-savolni shu o‘ringa ko‘chirish" }));
     if (final === 3) expect(put).not.toHaveBeenCalled(); else await screen.findByText("Savollar tartibi saqlandi");
     expect(rows()[final - 1].id).toBe("q3");
   });
@@ -133,6 +146,7 @@ describe("question positioning inside the existing workspace", () => {
     localStorage.setItem(model.draftKey(examBase.id, null), "unfinished-new-buffer");
     const { user } = setup(); await user.click(screen.getByRole("button", { name: "2 Savol 2" }));
     expect(screen.getByLabelText("Savol matni")).toHaveValue("Saqlanmagan matn");
+    await openMenu(user, 2);
     await user.click(screen.getByRole("button", { name: "Nusxa" }));
     await screen.findByText("Savol nusxasi yaratildi");
     expect(post).toHaveBeenCalledExactlyOnceWith("/teacher/exams/order-exam/questions", { ...source, position: 6 });
@@ -147,6 +161,7 @@ describe("question positioning inside the existing workspace", () => {
     const { user, rows } = setup();
     vi.mocked(put).mockRejectedValueOnce(new Error("Tarmoq xatosi"));
     await user.click(screen.getByRole("button", { name: "2 Savol 2" }));
+    await openMenu(user, 2);
     await user.click(screen.getByRole("button", { name: "Nusxa" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Savol oxirida saqlandi"));
     expect(rows().at(-1)?.id).toBe("copy1");
@@ -156,14 +171,15 @@ describe("question positioning inside the existing workspace", () => {
     expect(rows().map(q => q.id)).toEqual(["q1", "q2", "copy1", "q3", "q4", "q5"]);
   });
 
-  it("hides new order controls outside drafts and disables all of them while busy", async () => {
+  it("offers no row actions outside drafts and disables every menu button while a request is running", async () => {
     const { user, unmount } = setup(5, "published"); await user.click(screen.getByRole("button", { name: "2 Savol 2" }));
-    expect(screen.queryByLabelText("Savol joylashuvi")).not.toBeInTheDocument(); unmount();
+    expect(screen.queryAllByRole("button", { name: /savol amallari/ })).toHaveLength(0); unmount();
     setup(); vi.mocked(put).mockImplementationOnce(() => new Promise(() => {}));
     await user.click(screen.getByRole("button", { name: "2 Savol 2" }));
+    await openMenu(user, 2);
     await user.click(screen.getByRole("button", { name: "2-savolni yuqoriga ko‘chirish" }));
-    for (const name of ["+ Pastiga", "+ Yuqorisiga", "Nusxa", "2-savolni pastga ko‘chirish"]) expect(screen.getByRole("button", { name })).toBeDisabled();
-    expect(screen.getByLabelText("2-savolni ko‘chirish manzili")).toBeDisabled();
+    const triggers = screen.getAllByRole("button", { name: /savol amallari/ });
+    expect(triggers).toHaveLength(5); for (const trigger of triggers) expect(trigger).toBeDisabled();
   });
 
   it("validates each rail question once per buffer change and skips validation for selection-only renders", async () => {

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Save } from "lucide-react";
+import { LoaderCircle, Save } from "lucide-react";
 import { ErrorBox, Pill } from "../../components/ui";
 import QuestionBody, { type QuestionBodyData } from "../../components/QuestionBody";
 import PassagePicker, { type PassageActions } from "./PassagePicker";
@@ -78,7 +78,10 @@ export default function QuestionEditor({ buffer, position, editing, editable, bu
     <div className="question-answer-strip" aria-label="Javob kaliti">
       <div><strong>Javob kaliti</strong><div className="key-summary">{data?.parts.length ? data.parts.map((part, i) => <span key={`${part.label}-${i}`}>{part.label}: {part.accepted.join(" / ") || "kiritilmagan"}{part.manual_review ? " · qo‘lda tekshirish" : ""}</span>) : "Kalitni tekshiring"}</div></div>
       <Pill tone={ready ? "green" : "amber"}>{ready ? "Tayyor" : "Tekshiruv kerak"}</Pill>
-      <button className="button primary" disabled={!editable || busy || !ready || !!pendingKind}><Save size={17} />{busy ? "Saqlanmoqda…" : "Savolni saqlash"}</button>
+      <button type="submit" className="button primary question-save-button" aria-busy={busy} disabled={!editable || busy || !ready || !!pendingKind}>
+        <span className="question-save-icon" aria-hidden="true">{busy ? <LoaderCircle size={16} className="spin" /> : <Save size={16} />}</span>
+        <span>{busy ? "Saqlanmoqda…" : "Savolni saqlash"}</span>
+      </button>
     </div>
     {!editable && <ErrorBox error="Bu imtihonni tahrirlab bo‘lmaydi." />}
   </form>;

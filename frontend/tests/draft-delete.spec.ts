@@ -25,15 +25,17 @@ async function setup(page:Page,reject=false){
   return deletes;
 }
 
+const openMenu=(page:Page,n:number)=>page.getByRole('button',{name:`${n}-savol amallari`,exact:true}).click();
 test('question deletion confirms, cancels and refreshes renumbered questions',async({page})=>{
   const deletes=await setup(page);await page.goto('/teacher/exams/draft-exam');
-  await page.getByRole('button',{name:'2-savolni o‘chirish',exact:true}).click();
+  await openMenu(page,2);await page.getByRole('button',{name:'2-savolni o‘chirish',exact:true}).click();
   await page.getByRole('button',{name:'Bekor qilish',exact:true}).click();expect(deletes).toEqual([]);
-  await page.getByRole('button',{name:'2-savolni o‘chirish',exact:true}).click();
+  await openMenu(page,2);await page.getByRole('button',{name:'2-savolni o‘chirish',exact:true}).click();
   await page.getByRole('dialog').getByRole('button',{name:'O‘chirish',exact:true}).click();
   await expect(page.getByRole('status')).toContainText('Savol o‘chirildi');
   await expect(page.getByRole('button',{name:'2 Uchinchi savol',exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'3-savolni o‘chirish',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'3-savol amallari',exact:true})).toHaveCount(0);
+  await openMenu(page,2);await expect(page.getByRole('button',{name:'3-savolni o‘chirish',exact:true})).toHaveCount(0);
   expect(deletes).toEqual(['/api/teacher/exams/draft-exam/questions/q2']);
 });
 
@@ -44,7 +46,7 @@ test('dashboard deletes only confirmed drafts and preserves published exams',asy
   await page.getByRole('button',{name:'Bekor qilish',exact:true}).click();expect(deletes).toEqual([]);
   await page.getByRole('button',{name:'Qoralama sinov imtihonini o‘chirish',exact:true}).click();
   await page.getByRole('dialog').getByRole('button',{name:'O‘chirish',exact:true}).click();
-  await expect(page.getByRole('status')).toContainText('Qoralama imtihon o‘chirildi');
+  await expect(page.getByRole('status')).toContainText('«Qoralama sinov» imtihoni o‘chirildi');
   await expect(page.getByRole('button',{name:'Qoralama sinov imtihonini o‘chirish',exact:true})).toHaveCount(0);
   await expect(page.getByRole('cell',{name:'E’lon qilingan sinov',exact:true})).toBeVisible();
   expect(deletes).toEqual(['/api/teacher/exams/draft-exam']);
@@ -52,10 +54,22 @@ test('dashboard deletes only confirmed drafts and preserves published exams',asy
 
 test('delete conflict is visible inside confirmation and leaves editor intact',async({page})=>{
   const deletes=await setup(page,true);await page.goto('/teacher/exams/draft-exam');
-  await page.getByRole('button',{name:'2-savolni o‘chirish',exact:true}).click();
+  await openMenu(page,2);await page.getByRole('button',{name:'2-savolni o‘chirish',exact:true}).click();
   await page.getByRole('dialog').getByRole('button',{name:'O‘chirish',exact:true}).click();
   await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Faqat hali boshlanmagan qoralamani');
   await page.getByRole('button',{name:'Bekor qilish',exact:true}).click();
   await expect(page.getByRole('button',{name:'2 Ikkinchi savol',exact:true})).toBeVisible();
   expect(deletes).toHaveLength(1);
+});
+
+test('deleting from inside the exam returns to the list with a named, one-time confirmation',async({page})=>{
+  const deletes=await setup(page);await page.goto('/teacher/exams/draft-exam');
+  await page.getByRole('button',{name:'Qoralama sinov imtihonini o‘chirish',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'O‘chirish',exact:true}).click();
+  await expect(page).toHaveURL(/\/teacher$/);
+  await expect(page.getByRole('status')).toContainText('«Qoralama sinov» imtihoni o‘chirildi');
+  await expect(page.getByRole('button',{name:'Qoralama sinov imtihonini o‘chirish',exact:true})).toHaveCount(0);
+  expect(deletes).toEqual(['/api/teacher/exams/draft-exam']);
+  await page.reload();
+  await expect(page.getByRole('status')).toHaveCount(0);
 });

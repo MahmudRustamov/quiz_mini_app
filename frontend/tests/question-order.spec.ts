@@ -40,27 +40,28 @@ async function newShort(page: Page, text: string) {
   await expect(page.getByRole("status")).toContainText("Savol saqlandi");
 }
 
+const openMenu = (page: Page, position: number) => page.getByRole("button", { name: `${position}-savol amallari`, exact: true }).click();
 test("insert above/below, duplicate and arrow moves retain drafts and send complete orders", async ({ page }, testInfo) => {
   const { writes, rows } = await setup(page); await page.goto("/teacher/exams/order-exam");
   await page.getByRole("button", { name: "2 Savol 2", exact: true }).click();
-  await page.getByRole("button", { name: "+ Yuqorisiga", exact: true }).click();
+  await openMenu(page, 2); await page.getByRole("button", { name: "Yuqorisiga qo‘shish", exact: true }).click();
   expect(writes).toEqual([]); await newShort(page, "Kiritilgan savol");
   expect(rows().map(q => q.id)).toEqual(["q1", "q6", "q2", "q3", "q4", "q5"]);
   await page.getByLabel("Savol matni", { exact: true }).fill("Saqlanmagan matn");
   const draft = await page.evaluate(() => localStorage.getItem("question-editor:order-exam:q6"));
-  await page.getByRole("button", { name: "Nusxa", exact: true }).click();
+  await openMenu(page, 2); await page.getByRole("button", { name: "Nusxa", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Savol nusxasi yaratildi");
   expect(rows().map(q => q.id)).toEqual(["q1", "q6", "q7", "q2", "q3", "q4", "q5"]);
   await expect(page.getByLabel("Savol matni", { exact: true })).toHaveValue("Kiritilgan savol");
   expect(await page.evaluate(() => localStorage.getItem("question-editor:order-exam:q6"))).toBe(draft);
   expect(await page.evaluate(() => localStorage.getItem("question-editor:order-exam:q7"))).toBeNull();
-  await page.getByRole("button", { name: "3-savolni pastga ko‘chirish", exact: true }).click();
-  await expect(page.getByLabel("4-savolni ko‘chirish manzili", { exact: true })).toBeEnabled();
+  await openMenu(page, 3); await page.getByRole("button", { name: "3-savolni pastga ko‘chirish", exact: true }).click();
+  await expect(page.getByRole("button", { name: "4-savol amallari", exact: true })).toBeEnabled();
   expect(rows().map(q => q.id)).toEqual(["q1", "q6", "q2", "q7", "q3", "q4", "q5"]);
-  await page.getByRole("button", { name: "4-savolni yuqoriga ko‘chirish", exact: true }).click();
-  await expect(page.getByLabel("3-savolni ko‘chirish manzili", { exact: true })).toBeEnabled();
+  await openMenu(page, 4); await page.getByRole("button", { name: "4-savolni yuqoriga ko‘chirish", exact: true }).click();
+  await expect(page.getByRole("button", { name: "3-savol amallari", exact: true })).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath("question-order.png"), fullPage: true });
-  await page.getByRole("button", { name: "+ Pastiga", exact: true }).click();
+  await openMenu(page, 3); await page.getByRole("button", { name: "Pastiga qo‘shish", exact: true }).click();
   await page.reload(); await expect(page.getByText(/Yangi savol 3-savoldan keyin/)).toBeVisible();
   await newShort(page, "Pastdagi savol");
   expect(rows().map(q => q.id)).toEqual(["q1", "q6", "q7", "q8", "q2", "q3", "q4", "q5"]);
@@ -72,20 +73,25 @@ test("long jumps, target clamping and reload preserve the selected question's dr
   const { writes, rows } = await setup(page, 50); await page.goto("/teacher/exams/order-exam");
   await page.getByRole("button", { name: "40 Savol 40", exact: true }).click();
   await page.getByLabel("Savol matni", { exact: true }).fill("Mahalliy qoralama");
+  await openMenu(page, 40);
   const target = page.getByLabel("40-savolni ko‘chirish manzili", { exact: true });
   await target.fill("3"); await target.press("Enter");
-  await expect(page.getByLabel("3-savolni ko‘chirish manzili", { exact: true })).toBeEnabled(); expect(rows()[2].id).toBe("q40");
-  await page.getByLabel("3-savolni ko‘chirish manzili", { exact: true }).fill("48");
-  await page.getByLabel("Savol matni", { exact: true }).click();
-  await expect(page.getByLabel("48-savolni ko‘chirish manzili", { exact: true })).toBeEnabled(); expect(rows()[47].id).toBe("q40");
+  await expect(page.getByRole("button", { name: "3-savol amallari", exact: true })).toBeEnabled(); expect(rows()[2].id).toBe("q40");
+  await openMenu(page, 3); await page.getByLabel("3-savolni ko‘chirish manzili", { exact: true }).fill("48");
+  await page.getByRole("button", { name: "3-savolni shu o‘ringa ko‘chirish", exact: true }).click();
+  await expect(page.getByRole("button", { name: "48-savol amallari", exact: true })).toBeEnabled(); expect(rows()[47].id).toBe("q40");
   await page.reload(); await page.getByRole("button", { name: "48 Savol 40", exact: true }).click();
   await expect(page.getByLabel("Savol matni", { exact: true })).toHaveValue("Mahalliy qoralama");
+  await openMenu(page, 48);
   await page.getByLabel("48-savolni ko‘chirish manzili", { exact: true }).fill("0");
   await page.getByLabel("48-savolni ko‘chirish manzili", { exact: true }).press("Enter");
-  await expect(page.getByLabel("1-savolni ko‘chirish manzili", { exact: true })).toBeEnabled(); expect(rows()[0].id).toBe("q40");
+  await expect(page.getByRole("button", { name: "1-savol amallari", exact: true })).toBeEnabled(); expect(rows()[0].id).toBe("q40");
+  await openMenu(page, 1);
   await page.getByLabel("1-savolni ko‘chirish manzili", { exact: true }).fill("51");
   await page.getByLabel("1-savolni ko‘chirish manzili", { exact: true }).press("Enter");
-  await expect(page.getByLabel("50-savolni ko‘chirish manzili", { exact: true })).toBeEnabled(); expect(rows()[49].id).toBe("q40");
+  await expect(page.getByRole("button", { name: "50-savol amallari", exact: true })).toBeEnabled(); expect(rows()[49].id).toBe("q40");
+  // Typing a slot and clicking away cancels it: nothing is sent.
+  await openMenu(page, 50);
   const last = page.getByLabel("50-savolni ko‘chirish manzili", { exact: true }); await last.fill(""); await last.pressSequentially("abc");
   await page.getByLabel("Savol matni", { exact: true }).click(); expect(writes).toHaveLength(4);
   expect(writes.every(w => w.path.endsWith("/questions/order"))).toBe(true);
@@ -94,7 +100,7 @@ test("long jumps, target clamping and reload preserve the selected question's dr
 test("failed placement is retryable without duplicating the appended question", async ({ page }) => {
   const { writes, rows } = await setup(page, 5, true); await page.goto("/teacher/exams/order-exam");
   await page.getByRole("button", { name: "2 Savol 2", exact: true }).click();
-  await page.getByRole("button", { name: "Nusxa", exact: true }).click();
+  await openMenu(page, 2); await page.getByRole("button", { name: "Nusxa", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Savol oxirida saqlandi");
   expect(rows().at(-1)?.id).toBe("q6");
   await page.getByRole("button", { name: "Joylashni qayta urinish", exact: true }).click();

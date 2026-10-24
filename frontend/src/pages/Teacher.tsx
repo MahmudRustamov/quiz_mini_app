@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -77,9 +77,14 @@ function TeacherNav() {
     </div>
   );
 }
+// Both delete paths (list row, exam page) confirm with the same sentence, naming the exam.
+const deletedMessage = (title: string) => `«${title}» imtihoni o‘chirildi`;
 export default function Teacher() {
   const [create, setCreate] = useState(false);
-  const [pendingDelete,setPendingDelete]=useState<Exam|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+  const [pendingDelete,setPendingDelete]=useState<Exam|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const location=useLocation();
+  // The exam page hands over the deleted title through navigation state, because its own banner state ends with the page.
+  const [message,setMessage]=useState(()=>{const t=(location.state as {deleted?:string}|null)?.deleted;return t?deletedMessage(t):'';});
   const client=useQueryClient();
   const act=async(action:()=>Promise<unknown>,success:string)=>{
     setBusy(true);setError('');setMessage('');
@@ -87,6 +92,8 @@ export default function Teacher() {
     catch(e){setError(e instanceof Error?e.message:'Amal bajarilmadi');}finally{setBusy(false);}
   };
   const nav = useNavigate();
+  // History state survives a reload; clear it so the banner shows once, not on every refresh.
+  useEffect(()=>{if((location.state as {deleted?:string}|null)?.deleted)nav(location.pathname,{replace:true,state:null});},[]);
   const q = useQuery({
     queryKey: ["teacher-exams"],
     queryFn: () => api<Exam[]>("/teacher/exams"),
@@ -141,7 +148,7 @@ export default function Teacher() {
         onCancel={()=>setPendingDelete(null)} onConfirm={()=>void act(async()=>{
           await api(`/teacher/exams/${pendingDelete.id}`,{method:'DELETE'});
           client.removeQueries({queryKey:['teacher-exam',pendingDelete.id]});setPendingDelete(null);
-        },'Qoralama imtihon o‘chirildi')}/>}
+        },deletedMessage(pendingDelete.title))}/>}
       {create && (
         <form
           className="panel form-panel"
@@ -444,7 +451,7 @@ export function ExamEditor() {
                 client.removeQueries({ queryKey: ["teacher-exam", exam.id] });
                 setConfirmDelete(false);
                 await refresh();
-                nav("/teacher");
+                nav("/teacher", { state: { deleted: exam.title } });
               } catch (e) {
                 setError(
                   e instanceof Error ? e.message : "Imtihon o‘chirilmadi.",

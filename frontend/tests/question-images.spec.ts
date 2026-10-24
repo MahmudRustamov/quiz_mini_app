@@ -77,6 +77,7 @@ test("question and image-only choice upload, zoom, reopen, duplicate and removal
   await page.reload(); await page.getByRole("button", { name: "1 Rasmli savol", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Forma", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByAltText("A variant rasmi 1")).toHaveAttribute("src", /^blob:/);
+  await page.getByRole("button", { name: "1-savol amallari", exact: true }).click();
   await page.getByRole("button", { name: "Nusxa", exact: true }).click(); await expect(page.getByRole("status")).toContainText("Savol nusxasi yaratildi");
   expect((writes[1].body as QuestionInput).options[0]).toEqual(payload.options[0]);
   await page.getByRole("button", { name: "A variant rasmi: 1-rasmni olib tashlash", exact: true }).click();
